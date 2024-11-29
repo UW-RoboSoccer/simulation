@@ -1,5 +1,8 @@
 import numpy as np
 import mujoco as mj
+from dm_control import mjcf
+from dm_control import composer
+from dm_control.entities import props
 
 # def _get_texture(name):
 #     contents = resources.GetResource(
@@ -7,20 +10,20 @@ import mujoco as mj
 #     return m
 #     )
 
-_WALL_HEIGHT = 10
-_WALL_THICKNESS = .5
-_GOALPOST_REL_SIZE = 0.07 #Ratio of goalpost radius to goal size
-_SUPPORT_POST_RATIO = 0.75 #Ratio of support post radius to goalpost radius
-def _goalpost_radius(size):
-    return _GOALPOST_REL_SIZE * sum(size) / 3.
+# _WALL_HEIGHT = 10
+# _WALL_THICKNESS = .5
+# _GOALPOST_REL_SIZE = 0.07 #Ratio of goalpost radius to goal size
+# _SUPPORT_POST_RATIO = 0.75 #Ratio of support post radius to goalpost radius
+# def _goalpost_radius(size):
+#     return _GOALPOST_REL_SIZE * sum(size) / 3.
 
-def _post_radius(goalpost_name, goalpost_radius):
-    radius = goalpost_radius
-    if 'top' in goalpost_name:
-        radius *= 1.01
-    if 'support' in goalpost_name:
-        radius *= _SUPPORT_POST_RATIO
-    return radius
+# def _post_radius(goalpost_name, goalpost_radius):
+#     radius = goalpost_radius
+#     if 'top' in goalpost_name:
+#         radius *= 1.01
+#     if 'support' in goalpost_name:
+#         radius *= _SUPPORT_POST_RATIO
+#     return radius
 
 
 #class Goal(__):
