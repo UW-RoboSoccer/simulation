@@ -24,10 +24,10 @@ class Player(legacy_base.Walker):
         if name:
             self._mjcf_root.model = name
 
-        # limits = zip(*(actuator.joint.range for actuator in self.actuators))
-        # lower, upper = (np.array(limit) for limit in limits)
-        # self._scale = upper - lower
-        # self._offset = upper + lower
+        limits = zip(*(actuator.joint.range for actuator in self.actuators))
+        lower, upper = (np.array(limit) for limit in limits)
+        self._scale = upper - lower
+        self._offset = upper + lower
 
     def _build_observables(self):
         return PlayerObservables(self)
@@ -58,16 +58,16 @@ class Player(legacy_base.Walker):
 
     @composer.cached_property
     def left_arm_root(self):
-        return self._mjcf_root.find('boeqdy', 'lclavicle')
+        return self._mjcf_root.find('body', 'l_sho_pitch_link')
 
     @composer.cached_property
     def right_arm_root(self):
-        return self._mjcf_root.find('body', 'rclavicle')
+        return self._mjcf_root.find('body', 'r_sho_pitch_link')
 
     @composer.cached_property
     def ground_contact_geoms(self):
-        return tuple(self._mjcf_root.find('body', 'lfoot').find_all('geom') +
-                    self._mjcf_root.find('body', 'rfoot').find_all('geom'))
+        return tuple(self._mjcf_root.find('body', 'l_ank_roll_link').find_all('geom') +
+                    self._mjcf_root.find('body', 'r_ank_roll_link').find_all('geom'))
 
     @composer.cached_property
     def standing_height(self):
@@ -90,20 +90,8 @@ class Player(legacy_base.Walker):
         return tuple(self._mjcf_root.find_all('body'))
 
     @composer.cached_property
-    def mocap_tracking_bodies(self):
-        """Collection of bodies for mocap tracking."""
-        # remove root body
-        root_body = self._mjcf_root.find('body', 'root')
-        return tuple(
-            b for b in self._mjcf_root.find_all('body') if b != root_body)
-
-    @composer.cached_property
     def egocentric_camera(self):
         return self._mjcf_root.find('camera', 'egocentric')
-
-    @composer.cached_property
-    def body_camera(self):
-        return self._mjcf_root.find('camera', 'bodycam')
 
 class PlayerObservables(legacy_base.WalkerObservables):
     """Observables for a humanoid soccer player."""
@@ -111,12 +99,6 @@ class PlayerObservables(legacy_base.WalkerObservables):
     @composer.observable
     def head_height(self):
         observable.MJCFFeature('xpos', self._entity.head)[2]
-
-    @composer.observable
-    def sensors_torque(self):
-        return observable.MJCFFeature(
-            'sensordata', self._entity.mjcf_model.sensor.torque,
-            corruptor=lambda v, random_state: np.tanh(2 * v / _TORQUE_LIMIT))
 
     @composer.observable
     def actuator_activation(self):
