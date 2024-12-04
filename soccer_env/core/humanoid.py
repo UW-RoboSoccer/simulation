@@ -10,7 +10,9 @@ from dm_control.composer.observation import observable
 _STAND_HEIGHT = 1.0
 _TORQUE_LIMIT = 60.0
 
-_XML_PATH = os.path.join(os.path.dirname(__file__), 'assets', 'humanoid_{model_version}.xml')
+current_dir = os.path.dirname(__file__)
+parent_dir = os.path.dirname(current_dir)
+_XML_PATH = os.path.join(parent_dir, 'assets', 'robotis_op3', 'op3.xml')
 
 class Player(legacy_base.Walker):
     """A humanoid soccer player."""
@@ -22,10 +24,10 @@ class Player(legacy_base.Walker):
         if name:
             self._mjcf_root.model = name
 
-        limits = zip(*(actuator.joint.range for actuator in self.actuators))
-        lower, upper = (np.array(limit) for limit in limits)
-        self._scale = upper - lower
-        self._offset = upper + lower
+        # limits = zip(*(actuator.joint.range for actuator in self.actuators))
+        # lower, upper = (np.array(limit) for limit in limits)
+        # self._scale = upper - lower
+        # self._offset = upper + lower
 
     def _build_observables(self):
         return PlayerObservables(self)
@@ -37,21 +39,26 @@ class Player(legacy_base.Walker):
     def _xml_path(self):
         return _XML_PATH.format(model_version='v0')
     
+    @property
+    def mjcf_model(self):
+        """Returns the MJCF model associated with this entity/player."""
+        return self._mjcf_root
+    
     @composer.cached_property
     def actuators(self):
         return tuple(self._mjcf_root.find_all('actuator'))
 
     @composer.cached_property
     def root_body(self):
-        return self._mjcf_root.find('body', 'root')
+        return self._mjcf_root.find('body', 'body_link')
 
     @composer.cached_property
     def head(self):
-        return self._mjcf_root.find('body', 'head')
+        return self._mjcf_root.find('body', 'head_tilt_link')
 
     @composer.cached_property
     def left_arm_root(self):
-        return self._mjcf_root.find('body', 'lclavicle')
+        return self._mjcf_root.find('boeqdy', 'lclavicle')
 
     @composer.cached_property
     def right_arm_root(self):
@@ -68,10 +75,10 @@ class Player(legacy_base.Walker):
 
     @composer.cached_property
     def end_effectors(self):
-        return (self._mjcf_root.find('body', 'rradius'),
-                self._mjcf_root.find('body', 'lradius'),
-                self._mjcf_root.find('body', 'rfoot'),
-                self._mjcf_root.find('body', 'lfoot'))
+        return (self._mjcf_root.find('body', 'l_el_link'),
+                self._mjcf_root.find('body', 'r_el_link'),
+                self._mjcf_root.find('body', 'l_ank_roll_link'),
+                self._mjcf_root.find('body', 'r_ank_roll_link'))
 
     @composer.cached_property
     def observable_joints(self):
@@ -113,7 +120,7 @@ class PlayerObservables(legacy_base.WalkerObservables):
 
     @composer.observable
     def actuator_activation(self):
-        return observable.MJCFFeature('act', self._entity.find_all('actuator'))
+        return observable.MJCFFeature('act', self._entity.mjcf_model.find_all('actuator'))
 
     @composer.observable
     def appedages_pos(self):
@@ -138,3 +145,6 @@ class PlayerObservables(legacy_base.WalkerObservables):
             self.joints_vel,
             self.world_zaxis,
         ] + self._collect_from_attachments('proprioception')
+    
+
+       

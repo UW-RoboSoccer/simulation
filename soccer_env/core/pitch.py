@@ -5,7 +5,7 @@ from absl import logging
 from dm_control import composer
 from dm_control import mjcf
 from dm_control.composer.variation import distributions
-from dm_cotrol.entities import props
+from dm_control.entities import props
 from dm_control.locomotion.soccer import team
 import numpy as np
 
