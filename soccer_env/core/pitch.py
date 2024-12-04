@@ -5,14 +5,15 @@ from absl import logging
 from dm_control import composer
 from dm_control import mjcf
 from dm_control.composer.variation import distributions
-from dm_cotrol.entities import props
+from dm_control.entities import props
 from dm_control.locomotion.soccer import team
 import numpy as np
 
 from dm_control.utils import io as resources 
 
-_ASSETS_PATH = os.path.join(os.path.dirname(__file__), 'assets', 'pitch')
+# change line 295 for different field texture/image
 
+_ASSETS_PATH = os.path.abspath(os.path.join('soccer_env','assets', 'pitch'))
 _TOP_CAMERA_Y_PADDING_FACTOR = 1.1
 _TOP_CAMERA_DISTANCE = 95.
 _GROUND_GEOM_GRID_RATIO = 1. / 100
@@ -94,6 +95,50 @@ def _goalpost_fromto(unit_fromto, size, pos, direction):
   #why are they using 2size and 2pos? Look into this later
   return fromto*np.array(size+size) + np.array(pos+pos)
 
+
+def _fieldbox_pos_size(field_size, goal_size):
+  """Infers position and size of fieldbox given pitch size.
+
+  Walls are placed around the field so that the ball cannot travel beyond
+  `field` but walkers can walk outside of the `field` but not the surrounding
+  pitch. Holes are left in the fieldbox at the goal positions to enable scoring.
+
+  Args:
+    field_size: a tuple of (length, width) of the field.
+    goal_size: a tuple of (unused_depth, width, height) of the goal.
+
+  Returns:
+    a list of 8 tuples, each representing the position and size of a wall box.
+  """
+
+  box_half_height = 20.
+  corner_pos_y = 0.5 * (field_size[1] + goal_size[1])
+  corner_size_y = 0.5 * (field_size[1] - goal_size[1])
+  thickness = 1.0
+  top_pos_z = box_half_height + goal_size[2]
+  top_size_z = box_half_height - goal_size[2]
+  wall_offset_x = field_size[0] + thickness
+  wall_offset_y = field_size[1] + thickness
+  return [
+      ((0., -wall_offset_y, box_half_height),
+       (field_size[0], thickness, box_half_height)),  # near side
+      ((0., wall_offset_y, box_half_height),
+       (field_size[0], thickness, box_half_height)),  # far side
+      ((-wall_offset_x, -corner_pos_y, box_half_height),
+       (thickness, corner_size_y, box_half_height)),  # left near corner
+      ((-wall_offset_x, 0., top_pos_z),
+       (thickness, goal_size[1], top_size_z)),  # left top corner
+      ((-wall_offset_x, corner_pos_y, box_half_height),
+       (thickness, corner_size_y, box_half_height)),  # left far corner
+      ((wall_offset_x, -corner_pos_y, box_half_height),
+       (thickness, corner_size_y, box_half_height)),  # right near corner
+      ((wall_offset_x, 0., top_pos_z),
+       (thickness, goal_size[1], top_size_z)),  # right top corner
+      ((wall_offset_x, corner_pos_y, box_half_height),
+       (thickness, corner_size_y, box_half_height)),  # right far corner
+  ]
+
+
 class Goal(props.PositionDetector):
   #Goal for soccer + PositionDetector with goalposts
 
@@ -124,11 +169,12 @@ class Goal(props.PositionDetector):
         self._direction = np.array((direction, direction, 1))
         
         kwargs['visible'] = False
-        super()._build(retain_substep_directions=True, **kwargs)
+        super()._build(retain_substep_detections=True, **kwargs)
          
         size = kwargs['size']
         pos = kwargs['pos']
         self._goalpost_radius = _goalpost_radius(size)
+        print("Goalpost radius: ", self._goalpost_radius)
         self._goal_geoms = []
         for geom_name, unit_fromto in _GOALPOSTS.items():
             geom_fromto = _goalpost_fromto(unit_fromto, size, pos, self._direction)
@@ -249,7 +295,7 @@ class Pitch(composer.Arena):
         self._field_texture = self._mjcf_root.asset.add(
             'texture',
             type='2d',
-            file=_get_texture('pitch'),
+            file=_get_texture('final_pitch2'),
             name='fieldplane')
         self._field_material = self._mjcf_root.asset.add(
             'material', name='fieldplane', texture=self._field_texture)
@@ -259,6 +305,7 @@ class Pitch(composer.Arena):
             name='ground',
             type='plane',
             material=self._field_material,
+            #THIS IS FISHY!!! (BELOW)
             size=list(self._size) + [max(self._size) * _GROUND_GEOM_GRID_RATIO])
 
         # Build goal position detectors.
@@ -302,19 +349,33 @@ class Pitch(composer.Arena):
             return self._mjcf_root.worldbody.add(
                 'geom',
                 type='plane',
-                size=(1, 1, 1),
-                rgba=(0.306, 0.682, 0.223, 1),
+                size=(9, 6, 1),
+                rgba=(255, 0, 0, 0),
+                # rgba=(0.306, 0.682, 0.223, 1),
                 contype=0,
                 conaffinity=0)
 
         self._perimeter = [_visual_plane() for _ in range(8)]
         self._update_perimeter()
 
+        self._field_box = []
+        if field_box:
+            for box_pos, box_size in _fieldbox_pos_size(
+                    (self._field.upper - self._field.lower) / 2.0, goal_size):
+                self._field_box.append(
+                    self._mjcf_root.worldbody.add(
+                        'geom',
+                        type='box',
+                        size=box_size,
+                        rgba=(0.306, 0.682, 0.223, 1)),
+                        pos=box_pos)
+
         # Build hoarding sites.
-        def _box_site():
-            return self._mjcf_root.worldbody.add('site', type='box', size=(1, 1, 1))
-            self._hoarding = [_box_site() for _ in range(4 * _NUM_HOARDING)]
-            self._update_hoarding()
+        # def _box_site():
+        #     return self._mjcf_root.worldbody.add('site', type='box', size=(1, 1, 1))
+        
+        # self._hoarding = [_box_site() for _ in range(4 * _NUM_HOARDING)]
+        # self._update_hoarding()
 
     def _update_hoarding(self):
         # Resize, reposition and re-color visual perimeter box geoms.

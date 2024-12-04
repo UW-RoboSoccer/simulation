@@ -12,4 +12,4 @@ from .core import *
 # from soccer_env.core.soccer_ball import SoccerBall
 # from soccer_env.env import SoccerEnvironment
 
-__all__ = ["Player", "PlayerObservables", "Pitch", "SoccerBall", "SoccerEnvironment", "ASSETS_DIR"]
+__all__ = [ "Pitch", "SoccerBall"]
