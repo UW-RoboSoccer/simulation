@@ -3,6 +3,7 @@ from dm_control.viewer import launch
 # from core.pitch import Pitch
 from core.pitch import Pitch
 from dm_control.composer import NullTask  # Assuming you have access to NullTask
+from dm_control.mjcf import export_with_assets
 
 def test_pitch_with_null_task(size=(9, 6), time_limit=45., random_state=None):
     """Test the pitch using NullTask for a simple setup."""
@@ -19,6 +20,9 @@ def test_pitch_with_null_task(size=(9, 6), time_limit=45., random_state=None):
         time_limit=time_limit,
         random_state=random_state
     )
+    export_with_assets(pitch._mjcf_root, out_dir='xml_save')
+    # mjcf_model = pitch._mjcf_root
+    # mjcf_model.save("pitch.xml")
 
     return env
 
