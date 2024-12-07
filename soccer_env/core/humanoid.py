@@ -12,10 +12,17 @@ from brax import actuator
 
 
 class Humanoid(PipelineEnv):
-    def __init__(self, forward_reward_w, alive_reward, ctrl_cost_w, terminate_when_dead, alive_z_range, _exclude_current_positions_from_observation=True,  reset_noise_scale=1e-2, **kwargs):
+    def __init__(self, 
+                 forward_reward_w=1.25, 
+                 alive_reward=0.1, 
+                 ctrl_cost_w=0.1, 
+                 terminate_when_dead=5.0, 
+                 alive_z_range=(1.0,2.0), 
+                 _exclude_current_positions_from_observation=True,  
+                 reset_noise_scale=1e-2, 
+                 **kwargs):
         path = pathlib.Path(__file__).parent.parent / 'assets' / 'op3'
-        print(path)
-        mj_model = mujoco.MjModel.from_xml_path(os.path.join(path, 'op3.xml'))
+        mj_model = mujoco.MjModel.from_xml_path(os.path.join(path, 'humanoid.xml'))
             # path / 'op3.xml')
 
         mj_model.opt.solver = mujoco.mjtSolver.mjSOL_NEWTON
@@ -74,7 +81,7 @@ class Humanoid(PipelineEnv):
 
         center_of_mass0, *_ = self._com(pipeline_state0)
         center_of_mass, *_ = self._com(pipeline_state)
-        velocity = (center_of_mass.pos - center_of_mass0.pos) / self.dt
+        velocity = (center_of_mass - center_of_mass0) / self.dt
 
         min_z, max_z = self._alive_z_range
         alive = jp.where(pipeline_state.x.pos[0, 2] < min_z, 0.0, 1.0)
@@ -85,7 +92,7 @@ class Humanoid(PipelineEnv):
         else: 
             alive_reward = self._alive_reward * alive 
 
-        forward_reward = self._foward_reward_w * velocity[0]
+        forward_reward = self._forward_reward_w * velocity[0]
         ctrl_cost = self._ctrl_cost_w * jp.sum(jp.square(action))
 
         obs = self._get_obs(pipeline_state, action)
