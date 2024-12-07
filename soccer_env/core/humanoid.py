@@ -1,6 +1,7 @@
 import mujoco
 import pathlib
 import jax
+import os
 
 from brax import envs
 from brax.io import mjcf
@@ -11,9 +12,11 @@ from brax import actuator
 
 
 class Humanoid(PipelineEnv):
-    def __init__(self, foward_reward_w, alive_reward, ctrl_cost_w, terminate_when_dead, alive_z_range, _exclude_current_positions_from_observation=True,  reset_noise_scale=1e-2, **kwargs):
-        path = pathlib.Path(__file__).parent / 'assets' / 'humanoid'
-        mj_model = mujoco.MjModel.from_xml_path(path / 'humanoid.xml')
+    def __init__(self, forward_reward_w, alive_reward, ctrl_cost_w, terminate_when_dead, alive_z_range, _exclude_current_positions_from_observation=True,  reset_noise_scale=1e-2, **kwargs):
+        path = pathlib.Path(__file__).parent.parent / 'assets' / 'op3'
+        print(path)
+        mj_model = mujoco.MjModel.from_xml_path(os.path.join(path, 'op3.xml'))
+            # path / 'op3.xml')
 
         mj_model.opt.solver = mujoco.mjtSolver.mjSOL_NEWTON
         mj_model.opt.iterations = 6
@@ -28,7 +31,7 @@ class Humanoid(PipelineEnv):
 
         super().__init__(sys=sys, **kwargs)
 
-        self._foward_reward_w = foward_reward_w
+        self._forward_reward_w = forward_reward_w
         self._alive_reward = alive_reward
         self._ctrl_cost_w = ctrl_cost_w
         self._terminate_when_dead = terminate_when_dead
@@ -41,7 +44,7 @@ class Humanoid(PipelineEnv):
 
         low, hi = -self._reset_noise_scale, self._reset_noise_scale
     
-        qpos = self.sys.int_q + jax.random.uniform(rng1,  (self.sys.q_size(),), minval=low, maxval=hi)
+        qpos = self.sys.init_q + jax.random.uniform(rng1,  (self.sys.q_size(),), minval=low, maxval=hi)
         qvel = jax.random.uniform(rng2, (self.sys.qd_size(),), minval=low, maxval=hi)
 
         pipeline_state = self.pipeline_init(qpos, qvel)
