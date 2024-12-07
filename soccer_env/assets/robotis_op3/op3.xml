@@ -238,6 +238,7 @@
     <exclude body1="r_hip_yaw_link" body2="r_hip_pitch_link"/>
   </contact>
 
+
   <actuator>
     <position name="head_pan_act" joint="head_pan"/>
     <position name="head_tilt_act" joint="head_tilt"/>

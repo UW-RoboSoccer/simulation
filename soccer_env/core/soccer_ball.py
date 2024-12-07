@@ -23,7 +23,9 @@ import numpy as np
 
 from dm_control.utils import io as resources
 
-_ASSETS_PATH = os.path.join(os.path.dirname(__file__), 'assets', 'soccer_ball')
+current_dir = os.path.dirname(__file__)
+parent_dir = os.path.dirname(current_dir)
+_ASSETS_PATH = os.path.join(parent_dir, 'assets', 'soccer_ball')
 
 # FIFA regulation parameters for a size 5 ball.
 _REGULATION_RADIUS = 0.117  # Meters.

@@ -1,0 +1,15 @@
+<mujoco model="checkered_plane">
+    <compiler angle="radian" />
+
+    <asset>
+        <!-- Define a checkered texture using an external PNG -->
+        <texture name="checkered" type="2d" file="checkered.png" />
+        <!-- Define a material that uses the checkered texture -->
+        <material name="checkered_mat" texture="checkered" />
+    </asset>
+
+    <worldbody>
+        <!-- Create the flat checkered plane -->
+        <geom type="plane" size="5 5 0.1" material="checkered_mat" />
+    </worldbody>
+</mujoco>

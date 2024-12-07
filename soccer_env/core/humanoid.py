@@ -14,6 +14,7 @@ current_dir = os.path.dirname(__file__)
 parent_dir = os.path.dirname(current_dir)
 _XML_PATH = os.path.join(parent_dir, 'assets', 'robotis_op3', 'op3.xml')
 
+
 class Player(legacy_base.Walker):
     """A humanoid soccer player."""
 
@@ -24,16 +25,16 @@ class Player(legacy_base.Walker):
         if name:
             self._mjcf_root.model = name
 
-        limits = zip(*(actuator.joint.range for actuator in self.actuators))
-        lower, upper = (np.array(limit) for limit in limits)
-        self._scale = upper - lower
-        self._offset = upper + lower
+        # limits = zip(*(actuator.joint.range for actuator in self.actuators))
+        # lower, upper = (np.array(limit) for limit in limits)
+        # self._scale = upper - lower
+        # self._offset = upper + lower
 
     def _build_observables(self):
         return PlayerObservables(self)
     
-    def pose_to_actuation(self, targt_pose):
-        return (2 * targt_pose - self._offset) / self._scale
+    # def pose_to_actuation(self, targt_pose):
+    #     return (2 * targt_pose - self._offset) / self._scale
 
     @property
     def _xml_path(self):
@@ -98,7 +99,8 @@ class PlayerObservables(legacy_base.WalkerObservables):
     
     @composer.observable
     def head_height(self):
-        observable.MJCFFeature('xpos', self._entity.head)[2]
+        return observable.MJCFFeature('xpos', self._entity.head)[2] #####
+         
 
     @composer.observable
     def actuator_activation(self):
