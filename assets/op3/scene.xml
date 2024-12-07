@@ -1,5 +1,5 @@
 <mujoco model="op3 scene">
-  <include file="op3.xml"/>
+  <include file="op3_simplified.xml"/>
 
   <statistic center="0 0 0.2" extent="0.6"/>
 
