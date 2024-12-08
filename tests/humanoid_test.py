@@ -1,7 +1,6 @@
 from absl.testing import absltest, parameterized
 from soccer_env.core.humanoid import Player, PlayerObservables
 from soccer_env.core.flatplane import FlatPlane
-from soccer_env.core.sphere import Sphere
 from soccer_env.core.soccer_ball import SoccerBall
 from dm_control.viewer import launch
 from dm_control.composer import NullTask
@@ -35,7 +34,7 @@ def test_player_with_null_task():
     soccerball._build()
     # arena.add_free_entity(player)
     # soccerball.create_root_joints(arena.attach(sphere)) ## create_root_joints specifies how the player is attached to its parent frame, while arena.attach provides a frame for the entity and adds a freejoint to allow free movement
-    task = NullTask(root_entity=player)
+    task = SimpleTask(player=player)
 
     # task = SimpleTask(player, arena)
     env = composer.Environment(task=task, time_limit=45., random_state=None)
