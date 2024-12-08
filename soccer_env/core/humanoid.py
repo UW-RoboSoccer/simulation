@@ -12,7 +12,7 @@ _TORQUE_LIMIT = 60.0
 
 current_dir = os.path.dirname(__file__)
 parent_dir = os.path.dirname(current_dir)
-_XML_PATH = os.path.join(parent_dir, 'assets', 'robotis_op3', 'op3.xml')
+_XML_PATH = os.path.join(parent_dir, 'assets', 'robotis_op3', 'scene.xml')
 
 
 class Player(legacy_base.Walker):
@@ -93,6 +93,10 @@ class Player(legacy_base.Walker):
     @composer.cached_property
     def egocentric_camera(self):
         return self._mjcf_root.find('camera', 'egocentric')
+    
+    @property
+    def proprioception(self):
+        return self._build_observables().proprioception
 
 class PlayerObservables(legacy_base.WalkerObservables):
     """Observables for a humanoid soccer player."""

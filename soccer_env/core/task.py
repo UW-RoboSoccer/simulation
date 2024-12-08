@@ -8,7 +8,7 @@ def _disable_geom_contacts(entity):
 class SimpleTask(composer.Task):
     """A simple task that rewards the agent for standing upright."""
 
-    def __init__(self, player, arena, control_timestep=0.025, name='simple_task'):
+    def __init__(self, player, name='simple_task'):
         """Initializes this task.
 
         Args:
@@ -18,20 +18,36 @@ class SimpleTask(composer.Task):
         """
         # super().__init__(name=name)
         self._player = player
-        self._control_timestep = control_timestep
-        self.arena = arena
+        # self._control_timestep = control_timestep
+        # self.arena = arena
 
-        self.arena.add_free_entity(self._player)
-        _disable_geom_contacts(player)
+        # _disable_geom_contacts(player)
 
     @property
     def root_entity(self):
-        return self.arena
+        return self._player
     
     def get_reward(self, physics):
         """Returns a reward to the agent."""
         return 0.0
+    
+    @property
+    def observables(self):
+        observables = []
+        observables.append(self._player.proprioception)
+        return observables
+    
+    def should_terminate_episode(self, physics):
+        return self._player.head_height < 0.5
+    
+    def before_step(self, physics, actions, random_state):
+        self._player.apply_action(physics, actions, random_state)
+
+    
+
+
         
+    
 
 
     # def initialize_episode(self, physics):
