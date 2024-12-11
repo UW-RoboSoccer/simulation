@@ -8,7 +8,7 @@ from jax import numpy as jp
 
 import mujoco.viewer
 
-HUMANOID_SCENE_PATH = Path('.') / "assets" / "humanoid" / "humanoid.xml"
+HUMANOID_SCENE_PATH = Path('.') / "assets" / "humanoid" / "humanoid_pos.xml"
 OP3_SCENE_PATH = Path('.') / "assets" / "op3" / "scene.xml"
 
 mj_model = mujoco.MjModel.from_xml_path(str(HUMANOID_SCENE_PATH))
@@ -25,7 +25,7 @@ print('compilation finished')
 
 with mujoco.viewer.launch_passive(mj_model, mj_data) as viewer:
     while viewer.is_running():
-        mj_data.ctrl = jax.random.uniform(jax.random.PRNGKey(time.time_ns()), (mj_data.ctrl.shape[0],), jp.float32, minval=-1, maxval=1)
+        # mj_data.ctrl = jax.random.uniform(jax.random.PRNGKey(time.time_ns()), (mj_data.ctrl.shape[0],), jp.float32, minval=-1, maxval=1)
         mjx_data = mjx_data.replace(ctrl=jp.array(mj_data.ctrl), act=jp.array(mj_data.act))
         mjx_data = mjx_data.replace(qpos=jp.array(mj_data.qpos), qvel=jp.array(mj_data.qvel), time=jp.array(mj_data.time))
         mjx_model = mjx_model.tree_replace({
