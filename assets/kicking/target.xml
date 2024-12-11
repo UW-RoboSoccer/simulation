@@ -1,0 +1,17 @@
+<mujoco model ="arrow_target" >
+    <compiler angle="degree" inertiafromgeom="true"/>
+
+    <asset>
+        <material name="target_mat" texture="target_texture" rgba="1 1 1 1" />
+        <texture name="target_texture" type="2d" builtin="checker" rgb1="0.8 0.8 0.8" rgb2="0.2 0.2 0.2" width="100" height="100" mark="cross" markrgb="1 0 0" />
+        <!-- <texture name="target_texture" type="2d" file="target_mat.png" /> -->
+    </asset>
+
+    <worldbody>
+        <body name="arrow_target" pos="2 0 0.5" gravcomp="1">
+            <joint name="target_joint" type="free"/>
+            <geom type="cylinder" contype="1" conaffinity="1" size="0.3 0.01" material="target_mat" quat="0.707 0 0.707 0"/>
+            <inertial mass="0" pos="0 0 0"/>
+        </body>
+    </worldbody>
+</mujoco>

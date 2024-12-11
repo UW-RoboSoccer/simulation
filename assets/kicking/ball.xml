@@ -1,0 +1,42 @@
+<mujoco model="soccer_ball">
+    <compiler angle="degree" inertiafromgeom="true"/>
+
+    <asset>
+        <!-- Define the material for the ball -->
+        <material name="ball_mat" rgba="0 1 0 1" specular="0.5" shininess="0.5"/>
+        <texture builtin="gradient" height="100" rgb1=".4 .5 .6" rgb2="0 0 0" type="skybox" width="100"/>
+    </asset>
+    <worldbody>
+        <!-- <geom conaffinity="1" condim="3" friction="1 .1 .1" material="MatPlane" name="floor" pos="0 0 0" size="20 20 0.125" type="plane" rgba="0.5 0.5 0.5 1.0"/> -->
+        <!-- Define the ball body -->
+        <body name="ball" pos="0 1 1">
+            <joint name="ball_joint" type="free"/>
+            <geom name="ball_geom" contype="1" conaffinity="1" type="sphere" size="0.0714" material="ball_mat" solref="0.01 0.0003" solimp="0.99 0.99 0.1"/>
+        </body>
+    </worldbody>
+</mujoco>
+
+
+<!-- density="215" />  -->
+<!-- friction="0.5 0.1 0.1" solref="0.01 0.0003" solimp="0.99 0.99 0.1"/> -->
+<!-- <inertial mass="0.31" pos="0 0 0" diaginertia="0.002 0.002 0.002"/> -->
+<!-- 
+solref=x y , x = time constant y=damping ratio 
+solimp=d0 dwidth width midpoint power, d0=
+-->
+
+<!-- b = 0.15 Ns/m 
+b = 2 / (dwidth * tau)
+
+k = 10000 N/m
+k = d(r) / (dwidth^2 * tau^2 * dampratio^2)
+d(r) = varies between d0 and dwidth
+assume d(r) = dwidth
+a) 10000 = 1 / (dw * tau^2 * damp^2)
+b) 0.15 = 2 / (dw * tau)
+tau = 2.07 = m / b = 0.31 / 0.15
+dw = 0.15 * 2.07 / 2 = 0.155
+damp^2 = 1 / (10000 * 0.155 * 2.07^2) = 0.0003
+
+solimp = 
+-->
