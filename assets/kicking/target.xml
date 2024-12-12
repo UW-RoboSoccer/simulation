@@ -1,4 +1,4 @@
-<mujoco model ="arrow_target" >
+<mujoco model ="goal" >
     <compiler angle="degree" inertiafromgeom="true"/>
 
     <asset>
