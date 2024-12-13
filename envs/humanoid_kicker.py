@@ -13,8 +13,37 @@ from brax.envs.base import PipelineEnv, State
 import jax
 from jax import numpy as jp
 
-# def mass_center(mass, xpos):
-#     return (np.sum(mass * xpos, 0) / np.sum(mass))[0]
+def stabilization_reward(pipeline_state: base.State, action: jp.ndarray, target_height=1.0, dt=0.05) -> float:
+    torso_height = pipeline_state.x.pos[0, 2]
+    height_error = abs(target_height - torso_height)
+    height_reward = -height_error / dt
+
+    control_cost = 0.01 * jp.sum(jp.square(action))
+
+    reward = height_reward + 1 - control_cost
+    return reward
+
+def calculate_kick_reward(pipeline_state: base.State, action: jp.ndarray):
+
+    humanoid_pos = pipeline_state.x.pos[0]  # Humanoid
+    ball_pos = pipeline_state.x.pos[1]  # Ball
+    goal_pos = pipeline_state.x.pos[2]  # Goal
+
+    ball_to_goal_dist = jp.norm(ball_pos - goal_pos)  # Distance from ball to goal
+    humanoid_to_ball_dist = jp.norm(humanoid_pos - ball_pos)  # Distance from humanoid to ball
+    ball_speed = jp.norm(pipeline_state.xd.vel[1])  # Ball velocity
+
+    reward = -humanoid_to_ball_dist  # Reward approaching the ball
+    reward += jp.exp(-ball_to_goal_dist)  # Bonus for moving ball closer to goal
+    reward += 10.0 if ball_to_goal_dist < 0.1 else 0.0  # Big reward for scoring
+
+    ctrl_cost = 0.01 * jp.sum(jp.square(action))
+    reward -= ctrl_cost
+
+    done = jp.array(1.0) if ball_to_goal_dist < 0.1 else jp.array(0.0)
+
+    return reward, done
+
 
 class HumanoidKicker(PipelineEnv):
     def __init__(self, **kwargs):
@@ -60,23 +89,35 @@ class HumanoidKicker(PipelineEnv):
         return State(pipeline_state, obs, reward, done, metrics)
     
     def step(self, state: State, action: jp.ndarray) -> State:
+        # Scale action to actuator range
         action_min = self.sys.actuator.ctrl_range[:, 0]
         action_max = self.sys.actuator.ctrl_range[:, 1]
+        action = (action + 1) * (action_max - action_min) * 0.5 + action_min
 
-        action = (action + 1) * (action_max - action_min) * 0.5 + action_min # map action from [-1, 1] to [action_min, action_max]
-
+        # Simulate physics
         pipeline_state = self.pipeline_step(state.pipeline_state, action)
 
-        pos_after = pipeline_state.x.pos[0, 2]  # z coordinate of torso
-        uph_cost = (pos_after - 0) / self.dt
-        quad_ctrl_cost = 0.01 * jp.sum(jp.square(action))
-        # quad_impact_cost is not computed here
+        # Extract positions
 
+        # Calculate reward
+        kickReward, done = calculate_kick_reward(pipeline_state, action)
+        standReward = stabilization_reward(pipeline_state, action)
+        
+        #Control cost already calculated in both functions^
+        reward = kickReward + standReward #need to linearly decrease one and increase the other.
+
+        # Compute new observations
         obs = self._get_obs(pipeline_state, action)
-        reward = uph_cost + 1 - quad_ctrl_cost
-        state.metrics.update(reward_linup=uph_cost, reward_quadctrl=-quad_ctrl_cost)
 
-        return state.replace(pipeline_state=pipeline_state, obs=obs, reward=reward)
+        # Update metrics
+        metrics = {
+            'stabilizeReward': standReward,
+            'kickReward': kickReward,
+        }
+        state.metrics.update(metrics)
+
+        # Return updated state
+        return state.replace(pipeline_state=pipeline_state, obs=obs, reward=reward, done=done)
 
     def _get_obs(
         self, pipeline_state: base.State, action: jax.Array
@@ -128,46 +169,4 @@ class HumanoidKicker(PipelineEnv):
             jp.sum(jax.vmap(jp.multiply)(inertia.mass, x_i.pos), axis=0) / mass_sum
         )
         return com, inertia, mass_sum, x_i
-
-
-        #  ---------GPT Cooked Code, for reference. However, above code is from ---------  #
-            #  ---------humanoidStandup class thus is not correct for this ---------  #
-            
-# def step(self, state: State, action: jp.ndarray) -> State:
-#     # Scale action to actuator range
-#     action_min = self.sys.actuator.ctrl_range[:, 0]
-#     action_max = self.sys.actuator.ctrl_range[:, 1]
-#     action = (action + 1) * (action_max - action_min) * 0.5 + action_min
-
-#     # Simulate physics
-#     pipeline_state = self.pipeline_step(state.pipeline_state, action)
-
-#     # Extract positions
-#     humanoid_pos = pipeline_state.x.pos[0]  # Humanoid
-#     ball_pos = pipeline_state.x.pos[1]  # Ball
-#     goal_pos = pipeline_state.x.pos[2]  # Goal
-
-#     # Reward: Encourage interaction with the ball and scoring
-#     ball_to_goal_dist = jp.norm(ball_pos - goal_pos)  # Distance from ball to goal
-#     humanoid_to_ball_dist = jp.norm(humanoid_pos - ball_pos)  # Distance from humanoid to ball
-#     ball_speed = jp.norm(pipeline_state.xd.vel[1])  # Ball velocity
-
-#     reward = -humanoid_to_ball_dist  # Reward approaching the ball
-#     reward += jp.exp(-ball_to_goal_dist)  # Bonus for moving ball closer to goal
-#     reward += 10.0 if ball_to_goal_dist < 0.1 else 0.0  # Big reward for scoring
-
-#     # Penalty for control effort
-#     ctrl_cost = 0.01 * jp.sum(jp.square(action))
-#     reward -= ctrl_cost
-
-#     # Termination condition: Check if goal is scored
-#     done = jp.array(1.0) if ball_to_goal_dist < 0.1 else jp.array(0.0)
-
-#     # Compute new observations
-#     obs = self._get_obs(pipeline_state, action)
-
-#     # Update metrics
-#     state.metrics.update(reward_ctrl=-ctrl_cost, reward_goal=reward)
-
-#     # Return updated state
-#     return state.replace(pipeline_state=pipeline_state, obs=obs, reward=reward, done=done)
+    
