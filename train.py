@@ -154,6 +154,13 @@ train_fn = functools.partial(
     seed=0,
     clipping_epsilon=0.2, # PPO eplison 
     gae_lambda=0.95, # generalized advantage estimate param
+    # l2_regularization=1e-4,
+    # network_factory=create_lstm_policy_value_network( 
+    #     observation_size=env.observation_size, 
+    #     action_size=env.action_size, 
+    #     action_min=-1, 
+    #     action_max=1, 
+    # ),  
 )
 
 x_data = []

@@ -16,3 +16,5 @@ trimesh==4.5.3
 typing_extensions==4.12.2
 zipp==3.21.0
 brax==0.12.1
+matplotlib==3.10.0
+distrax==0.1.5

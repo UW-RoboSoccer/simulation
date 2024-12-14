@@ -125,6 +125,7 @@ class HumanoidKicker(PipelineEnv):
             'kickReward': zero,
         }
         return State(pipeline_state, obs, reward, done, metrics)
+
     
     def step(self, state: State, action: jp.ndarray) -> State:
         # Scale action to actuator range
