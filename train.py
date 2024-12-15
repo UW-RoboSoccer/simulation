@@ -24,110 +24,110 @@ import distrax
 
 from matplotlib import pyplot as plt
 
-class LSTMPolicyValueNetwork(nn.Module):
-    action_size: int
-    action_min: float
-    action_max: float
-    hidden_size: int = 128
-    kernel_init: jax.nn.initializers.Initializer = jax.nn.initializers.lecun_uniform()
-    bias: bool = True 
+# class LSTMPolicyValueNetwork(nn.Module):
+#     action_size: int
+#     action_min: float
+#     action_max: float
+#     hidden_size: int = 128
+#     kernel_init: jax.nn.initializers.Initializer = jax.nn.initializers.lecun_uniform()
+#     bias: bool = True 
 
-    def create_lstm_model(self, x, key):
-        """LSTM Model based on paper"""
+#     @nn.compact
+#     def create_lstm_model(self, x, key):
+#         """LSTM Model based on paper"""
 
-        # Pre-LSTM projection (128 from paper)
-        x = nn.Dense(
-            features=self.hidden_size,
-            kernel_init=self.kernel_init,
-            use_bias=self.bias,
-            )(x)
+#         # Pre-LSTM projection (128 from paper)
+#         x = nn.Dense(
+#             features=self.hidden_size,
+#             kernel_init=self.kernel_init,
+#             use_bias=self.bias,
+#             )(x)
         
-        x = nn.relu(x)
+#         x = nn.relu(x)
         
-        # LSTM processing
-        lstm_cell = nn.LSTMCell(
-            use_bias=self.bias,
+#         # LSTM processing
+#         lstm_cell = nn.LSTMCell(
+#             use_bias=self.bias,
 
-        )
-        batch_size = x.shape[0]
-        initial_carry = lstm_cell.initialize_carry(
-            jax.random.PRNGKey(key), 
-            (batch_size, self.hidden_size)
-        )
-        x, _ = lstm_cell(initial_carry, x)
+#         )
+#         batch_size = x.shape[0]
+#         initial_carry = lstm_cell.initialize_carry(
+#             jax.random.PRNGKey(key), 
+#             (batch_size, self.hidden_size)
+#         )
+#         x, _ = lstm_cell(initial_carry, x)
         
-        # Post-LSTM projection
-        x = nn.Dense(
-            features=self.hidden_size,
-            kernel_init=self.kernel_init,
-            use_bias=self.bias,
-            )(x)
+#         # Post-LSTM projection
+#         x = nn.Dense(
+#             features=self.hidden_size,
+#             kernel_init=self.kernel_init,
+#             use_bias=self.bias,
+#             )(x)
         
-        x = nn.relu(x)
+#         x = nn.relu(x)
         
-        return x
+#         return x
     
-    @nn.compact
-    def __call__(self, x, deterministic=False):
-        # Policy branch
-        # Use embedding function with key offset for policy
-        policy_x = self.create_lstm_model(x, self.hidden_size, key_offset=0)
+#     @nn.compact
+#     def __call__(self, x, deterministic=False):
+#         # Use embedding function with key offset for policy
+#         policy_x = self.create_lstm_model(x, self.hidden_size, key_offset=0)
         
-        # Policy mean
-        policy_mean = nn.Dense(features=self.action_size)(policy_x)
+#         # Policy mean
+#         policy_mean = nn.Dense(features=self.action_size)(policy_x)
         
-        # Learnable log standard deviation for diagonal covariance
-        log_std = self.param(
-            'policy_log_std', 
-            nn.initializers.zeros, 
-            (self.action_size,)
-        )
+#         # Learnable log standard deviation for diagonal covariance
+#         log_std = self.param(
+#             'policy_log_std', 
+#             nn.initializers.zeros, 
+#             (self.action_size,)
+#         )
         
-        # Create Gaussian distribution with clipped outputs
-        policy_std = jp.exp(log_std)
-        policy_dist = distrax.TruncatedNormal(
-            loc=policy_mean, 
-            scale=policy_std,
-            low=self.action_min,
-            high=self.action_max
-        )
+#         # Create Gaussian distribution with clipped outputs
+#         policy_std = jp.exp(log_std)
+#         policy_dist = distrax.TruncatedNormal(
+#             loc=policy_mean, 
+#             scale=policy_std,
+#             low=self.action_min,
+#             high=self.action_max
+#         )
         
-        # Value function 
-        value_x = self.create_lstm_model(x, self.hidden_size, key_offset=1)
+#         # Value function 
+#         value_x = self.create_lstm_model(x, self.hidden_size, key_offset=1)
         
-        # Value function output
-        value = nn.Dense(features=1)(value_x)
+#         # Value function output
+#         value = nn.Dense(features=1)(value_x)
         
-        return policy_dist, value.squeeze(-1)
+#         return policy_dist, value.squeeze(-1)
 
-def create_lstm_policy_value_network(observation_size, action_size, action_min, action_max):
-    def network_factory(num_action_repeats):
-        def policy_network(obs_size, action_size, unused_preprocessing_layer=None):
-            def init(key):
-                def make_policy_network():
-                    return LSTMPolicyValueNetwork(
-                        action_size=action_size, 
-                        action_min=action_min, 
-                        action_max=action_max
-                    )
+# def create_lstm_policy_value_network(observation_size, action_size, action_min, action_max):
+#     def network_factory(num_action_repeats):
+#         def policy_network(obs_size, action_size, unused_preprocessing_layer=None):
+#             def init(key):
+#                 def make_policy_network():
+#                     return LSTMPolicyValueNetwork(
+#                         action_size=action_size, 
+#                         action_min=action_min, 
+#                         action_max=action_max
+#                     )
                 
-                network = make_policy_network()
-                return network.init(key, jp.zeros((1, obs_size)))
+#                 network = make_policy_network()
+#                 return network.init(key, jp.zeros((1, obs_size)))
             
-            def apply(params, obs, key=None):
-                network = LSTMPolicyValueNetwork(
-                    action_size=action_size, 
-                    action_min=action_min, 
-                    action_max=action_max
-                )
-                policy_dist, value = network.apply(params, obs)
-                return policy_dist, value
+#             def apply(params, obs, key=None):
+#                 network = LSTMPolicyValueNetwork(
+#                     action_size=action_size, 
+#                     action_min=action_min, 
+#                     action_max=action_max
+#                 )
+#                 policy_dist, value = network.apply(params, obs)
+#                 return policy_dist, value
             
-            return init, apply
+#             return init, apply
         
-        return policy_network
+#         return policy_network
     
-    return network_factory
+#     return network_factory
 
 envs.register_environment('humanoid-kicker', HumanoidKicker)
 env = envs.get_environment('humanoid-kicker')
@@ -144,23 +144,16 @@ train_fn = functools.partial(
     normalize_observations=True,
     action_repeat=1,
     unroll_length=10,  # BPTT 
-    num_minibatches=100, 
+    num_minibatches=80, 
     num_updates_per_batch=3,  # Paper specified 
     discounting=0.995, # Gamma 
     learning_rate=0.001,
     entropy_cost=0.0, # Paper didn't implement entropy cost 
-    num_envs=4096, # 4096 envs x 
+    num_envs=4096, # 4096 envs
     batch_size=5120, # 5120 samples
     seed=0,
     clipping_epsilon=0.2, # PPO eplison 
     gae_lambda=0.95, # generalized advantage estimate param
-    l2_regularization=1e-4,
-    network_factory=create_lstm_policy_value_network( 
-        observation_size=env.observation_size, 
-        action_size=env.action_size, 
-        action_min=-1, 
-        action_max=1, 
-    ),  
 )
 
 x_data = []
