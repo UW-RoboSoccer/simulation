@@ -43,6 +43,7 @@
             <geom contype="1" fromto="0 -.07 0 0 .07 0" name="torso1" size="0.07" type="capsule"/>
             <geom contype="1" name="head" pos="0 0 .19" size=".09" type="sphere" user="258"/>
             <geom contype="1" fromto="-.01 -.06 -.12 -.01 .06 -.12" name="uwaist" size="0.06" type="capsule"/>
+            <site name ="IMU"/>
             <body name="lwaist" pos="-.01 0 -0.260" quat="1.000 0 -0.002 0">
                 <geom contype="1" fromto="0 -.06 0 0 .06 0" name="lwaist" size="0.06" type="capsule"/>
                 <joint armature="0.02" axis="0 0 1" damping="5" name="abdomen_z" pos="0 0 0.065" range="-45 45" stiffness="20" type="hinge"/>
@@ -121,4 +122,11 @@
         <motor gear="25" joint="left_shoulder2" name="left_shoulder2"/>
         <motor gear="25" joint="left_elbow" name="left_elbow"/>
     </actuator>
+
+    <sensor>
+        <accelerometer name="accel" site="IMU"/>
+        <gyro name="gyro" site="IMU"/>
+
+    </sensor>
+
 </mujoco>

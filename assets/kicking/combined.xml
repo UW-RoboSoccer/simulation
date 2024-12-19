@@ -1,5 +1,7 @@
 <mujoco model="combined_scene">
-    <include file="humanoid.xml"/>
+    <!-- <include file="humanoid.xml"/> -->
+    <include file="op3_simplified.xml"/>
     <include file="ball.xml"/>
     <include file="target.xml"/>
 </mujoco>
+

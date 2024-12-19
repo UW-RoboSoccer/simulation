@@ -11,71 +11,95 @@ from brax import actuator
 from brax.envs.base import PipelineEnv, State
 from brax import math 
 
+import mujoco
+from mujoco import mjx
+
 import jax
 from jax import numpy as jp
 
 POSITION_QUATERNION_SIZE = 7 # = xyz (3) + quaternion (4)
 VELOCITY_SIZE = 6 # = linear (3) + angular velocity (3)
 
-
-def stabilization_reward(pipeline_state: base.State, action: jp.ndarray, obs, target_height=1.0, dt=0.05) -> float:
-    pelvis_pos = obs[0:3]   # Humanoid
-
-    torso_height = pelvis_pos[2]
-    height_error = abs(target_height - torso_height)
-    height_reward = -height_error / dt
-
-    control_cost = 0.01 * jp.sum(jp.square(action))
-
-    reward = height_reward + 1 - control_cost
-
-    fallen_threshold = 0.5
-    done = torso_height < fallen_threshold
-    
-    return reward, done
-
-def calculate_kick_reward(pipeline_state: base.State, action: jp.ndarray, obs):
-
-    pelvis_pos = obs[0:3]  # Humanoid
-    ball_pos = obs[9:12] # Ball
-    goal_pos = obs[6:9]  # Goal
-    ball_vel = obs[12:15] # Ball velocity
-
-    ball_to_goal_dist = jp.linalg.norm(ball_pos - goal_pos)  # Distance from ball to goal
-    humanoid_to_ball_dist = jp.linalg.norm(pelvis_pos - ball_pos)  # Distance from humanoid to ball
-   
-    ball_speed = jp.linalg.norm(ball_vel)  # Speed of the ball
-    reward = -humanoid_to_ball_dist  # Reward approaching the ball
-    reward += jp.exp(-ball_to_goal_dist)  # Bonus for moving ball closer to goal
-    reward += jp.where(ball_to_goal_dist < 0.1, 10.0, 0.0) 
-    reward += 0.1 * ball_speed  # Bonus for kicking the ball    
-
-    ctrl_cost = 0.01 * jp.sum(jp.square(action))
-    reward -= ctrl_cost
-
-    done = jp.where(ball_to_goal_dist < 0.1, jp.array(1.0), jp.array(0.0))
-
-    return reward, done
-
 class HumanoidKicker(PipelineEnv):
     def __init__(self, **kwargs):
-        path = os.path.join(os.path.dirname(__file__), "..", "assets", "kicking", "combined.xml" )
-        sys = mjcf.load(str(path))
+        path = os.path.join(os.path.dirname(__file__), "..", "assets", "kicking", "op3_simplified.xml" )
+        mj_model = mujoco.MjModel.from_xml_path(str(path))
+        self.mj_data = mujoco.MjData(mj_model)
+        sys = mjcf.load_model(mj_model)
+        self.sys = sys
+        self.sensorData = {'accel' : [],
+                            'gyro' : []}
+                            
+        #TODO:: Add names to all geoms in op3_simplified.xml for easy indexing
+        # test the force collisions
+        # root body quat and acceleration should be referenced from sensor data from now on
+        # figure out code format convention (gonna go with underscores rather than camelCase)
+
+        self.lFootid = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_GEOM, 'leftFoot')
+        self.rFootid = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_GEOM, 'rightFoot')
+        self.links = self.sys.link_names
 
         super().__init__(sys, backend='mjx', **kwargs)
 
+
+        # foot_forces=[]
+        # for i in range(self.mj_data.ncon):
+        #     contact = self.mj_data.contact[i]
+        #     # Check if the contact involves the left or right foot
+        #     if contact.geom1 == self.lFootid or contact.geom2 == self.lFootid:
+        #         force = np.zeros(6)  # Force-torque vector
+        #         mujoco.mj_contactForce(mj_model, self.mj_data, i, force)
+        #         foot_forces.append(("left_foot", force))
+        #     elif contact.geom1 == self.rFootid or contact.geom2 == self.rFootid:
+        #         force = np.zeros(6)  # Force-torque vector
+        #         mujoco.mj_contactForce(mj_model, self.mj_data, i, force)
+        #         foot_forces.append(("right_foot", force))
+        # print(foot_forces)
+
+        # # Print the contact forces for debugging
+        # for foot, force in foot_forces:
+        #     print(f"{foot}: Force: {force[:3]}, Torque: {force[3:]}")
+
+
+        # print('leftFootid:', self.lFootid)
+        # print('rightFootid:', self.rFootid)
+
+        # print('data.contact:')
+        # print(self.mj_data.contact)
+
+
+        # print(self.links)
+
+        # num_geoms = mj_model.ngeom
+        # print('ngeom: ', num_geoms)
+        # geom_list = []
+        # for geom_id in range(num_geoms):
+        #     geom_name = mujoco.mj_id2name(mj_model, mujoco.mjtObj.mjOBJ_GEOM, geom_id)
+        #     geom_list.append((geom_id, geom_name))
+
+        # Print the list of geoms
+        # for geom_id, geom_name in geom_list:
+        #     print(f"Geom ID: {geom_id}, Geom Name: {geom_name}")
+
+        # print(sys.link_names)
+
         self.humanoid_links = ['torso', 'lwaist', 'pelvis', 'right_thigh', 'right_shin', 'left_thigh', 'left_shin', 'right_upper_arm', 'right_lower_arm', 'left_upper_arm', 'left_lower_arm'] 
-        self.ball_index= self._get_link_index("ball")   
-        self.target_index = self._get_link_index("target")
-        self.humanoid_index = [self._get_link_index(link) for link in self.humanoid_links]
+        # self.ball_index= self._get_link_index("ball")   
+        # self.target_index = self._get_link_index("target")
+        # self.humanoid_index = [self._get_link_index(link) for link in self.humanoid_links]
+        self.op3_links = [ 'body_link', 'head_pan_link', 'head_tilt_link', 'l_sho_pitch_link', 'l_sho_roll_link', 'l_el_link', 'r_sho_pitch_link', 'r_sho_roll_link', 'r_el_link',
+         'l_hip_yaw_link', 'l_hip_roll_link', 'l_hip_pitch_link', 'l_knee_link', 'l_ank_pitch_link', 'l_ank_roll_link', 
+         'r_hip_yaw_link', 'r_hip_roll_link', 'r_' ]
+
 
 
         #TODO:: Not hardcode this  
-        """
         print(len(self.sys.init_q))
+        print(self.sys.init_q)
+        """
         First 0-2 - xyz for root body 
         Next 3-6 - quaternion for root body 
-        5-23 - humanoid body angles? 
+        5-23 - humanoid dof angles
         24-26 - ball xyz
         27-30 ball quaternion 
         31-33 - goal xyz
@@ -150,17 +174,17 @@ class HumanoidKicker(PipelineEnv):
         standReward, doneStand = stabilization_reward(pipeline_state, action)
 >>>>>>> 19a86dc (saving)
         
-        done = doneKick + doneStand
+        done = jp.asarray(doneStand, dtype=jp.float32) # + doneKick
+
+        # done = doneStand
 
         #Control cost already calculated in both functions^
-        reward = kickReward + standReward #need to linearly decrease one and increase the other.
-
-     
+        reward = standReward #+ kickReward  #need to linearly decrease one and increase the other.
 
         # Update metrics
         metrics = {
             'stabilizeReward': standReward,
-            'kickReward': kickReward,
+            'kickReward': 0.0,
         }
         state.metrics.update(metrics)
 
@@ -173,26 +197,30 @@ class HumanoidKicker(PipelineEnv):
     ) -> jax.Array:
         """Observes humanoid body position, velocities, and angles."""
 
+        # ------- Keep on getting overflow errors can't verify if this is correct! ------ #
+
+        # print('pipeline_state.contacts:', pipeline_state.contacts)
+
+        # contact_forces = jp.zeros((2, 3))
+
+        # for contact in pipeline_state.contacts:
+        #     if contact.geom1 == self.lFootid:
+        #         contact_forces[0] = contact.force
+        #     elif contact.geom1 == self.rFootid:
+        #         contact_forces[1] = contact.force
+
+        # print('contact_forces 1:', contact_forces[0])
+        # print('contact_forces 2:', contact_forces[1])
+
         #assume COM pelvis 
-        position = pipeline_state.x.pos[2] 
-        velocity = pipeline_state.xd.vel[2]
+        position = pipeline_state.x.pos[2]  #same as below but for position
+        velocity = pipeline_state.xd.vel[2] #index 2 is the pelvis. 3 velocity values for every body
 
+        print("Velocity Array: ", velocity)
+        print(pipeline_state.xd.vel)
 
-        # com, inertia, mass_sum, x_i = self._com_humanoid(pipeline_state)
-        # cinr = x_i.replace(pos=x_i.pos - com).vmap().do(inertia)
-        # com_inertia = jp.hstack(
-        #     [cinr.i.reshape((cinr.i.shape[0], -1)), inertia.mass[: len(self.humanoid_links)]]
-        # )
-
-        # xd_i = (
-        #     base.Transform.create(pos=x_i.pos - pipeline_state.x.pos)
-        #     .vmap()
-        #     .do(pipeline_state.xd)
-        # )
-
-        # com_vel = inertia.mass[:len(self.humanoid_links)] * xd_i.vel[:len(self.humanoid_links)] / mass_sum
-        # com_ang = xd_i.ang[:len(self.humanoid_links)]
-        # com_velocity = jp.hstack([com_vel, com_ang])
+        self.sensorData['accel'].append(self.mj_data.sensor('accel').data.copy())
+        self.sensorData['gyro'].append(self.mj_data.sensor('gyro').data.copy())
 
         # qfrc_actuator = actuator.to_tau(
         #     self.sys, action, pipeline_state.q, pipeline_state.qd
@@ -206,8 +234,7 @@ class HumanoidKicker(PipelineEnv):
         return jp.concatenate([
             position,
             velocity,
-            # com_inertia.ravel(),
-            # com_velocity.ravel(),
+            self.sensorData,
             # qfrc_actuator,
             goal_pos,
             ball_pos,

@@ -63,7 +63,7 @@
     <default class="collision">
       <geom group="3"/>
       <default class="foot">
-        <geom mass="0s" type="box"/>
+        <geom mass="0" type="box"/>
       </default>
     </default>
     <default class="visual">
