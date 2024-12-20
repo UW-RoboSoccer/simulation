@@ -5,6 +5,7 @@
 # from gym import spaces
 import os
 
+import brax 
 from brax.io import mjcf
 from brax import base
 from brax import actuator
@@ -13,6 +14,7 @@ from brax import math
 
 import mujoco
 from mujoco import mjx
+from mujoco.mjx._src import support  # nit: find a better way to import this (if possible)
 
 import jax
 from jax import numpy as jp
@@ -22,36 +24,47 @@ VELOCITY_SIZE = 6 # = linear (3) + angular velocity (3)
 
 class HumanoidKicker(PipelineEnv):
     def __init__(self, **kwargs):
-        path = os.path.join(os.path.dirname(__file__), "..", "assets", "kicking", "op3_simplified.xml" )
+        path = os.path.join(os.path.dirname(__file__), "..", "assets", "kicking", "scene.xml" )
         mj_model = mujoco.MjModel.from_xml_path(str(path))
         self.mj_data = mujoco.MjData(mj_model)
+        self.mjx_model = mjx.put_model(mj_model)
+
         sys = mjcf.load_model(mj_model)
         self.sys = sys
-        self.sensorData = {'accel' : [],
-                            'gyro' : []}
-                            
-        #TODO:: Add names to all geoms in op3_simplified.xml for easy indexing
-        # test the force collisions
-        # root body quat and acceleration should be referenced from sensor data from now on
-        # figure out code format convention (gonna go with underscores rather than camelCase)
 
-        self.lFootid = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_GEOM, 'leftFoot')
-        self.rFootid = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_GEOM, 'rightFoot')
-        self.links = self.sys.link_names
 
         super().__init__(sys, backend='mjx', **kwargs)
 
+
+        self.sensorData = {'accel' : [],
+                            'gyro' : []}
+                            
+
+        self.floor_geom_id = support.name2id(mj_model, mujoco.mjtObj.mjOBJ_GEOM, 'floor')
+        self.left_foot_geom_id = support.name2id(mj_model, mujoco.mjtObj.mjOBJ_GEOM, 'leftFoot')
+        self.right_foot_geom_id = support.name2id(mj_model, mujoco.mjtObj.mjOBJ_GEOM, 'rightFoot')
+
+        print(self.left_foot_geom_id, self.right_foot_geom_id, self.floor_geom_id)
+
+
+         # #TODO:: Add names to all geoms in op3_simplified.xml for easy indexing
+        # # test the force collisions
+        # # root body quat and acceleration should be referenced from sensor data from now on
+        # # figure out code format convention (gonna go with underscores rather than camelCase)
+        # self.links = self.sys.link_names
+   
+        # print(self.mj_data.ncon)
 
         # foot_forces=[]
         # for i in range(self.mj_data.ncon):
         #     contact = self.mj_data.contact[i]
         #     # Check if the contact involves the left or right foot
         #     if contact.geom1 == self.lFootid or contact.geom2 == self.lFootid:
-        #         force = np.zeros(6)  # Force-torque vector
+        #         force = jp.zeros(6)  # Force-torque vector
         #         mujoco.mj_contactForce(mj_model, self.mj_data, i, force)
         #         foot_forces.append(("left_foot", force))
         #     elif contact.geom1 == self.rFootid or contact.geom2 == self.rFootid:
-        #         force = np.zeros(6)  # Force-torque vector
+        #         force = jp.zeros(6)  # Force-torque vector
         #         mujoco.mj_contactForce(mj_model, self.mj_data, i, force)
         #         foot_forces.append(("right_foot", force))
         # print(foot_forces)
@@ -94,8 +107,8 @@ class HumanoidKicker(PipelineEnv):
 
 
         #TODO:: Not hardcode this  
-        print(len(self.sys.init_q))
-        print(self.sys.init_q)
+        # print(len(self.sys.init_q))
+        # print(self.sys.init_q)
         """
         First 0-2 - xyz for root body 
         Next 3-6 - quaternion for root body 
@@ -140,6 +153,13 @@ class HumanoidKicker(PipelineEnv):
         qpos = jp.concatenate([humanoid_qpos, ball_qpos, target_qpos])
         qvel = jp.concatenate([humanoid_qvel, ball_qvel, target_qvel])
 
+
+        qpos = self.sys.init_q + jax.random.uniform(
+            rng1, (self.sys.q_size(),), minval=-0.01, maxval=0.01
+        )
+        qvel = jax.random.uniform(
+            rng2, (self.sys.qd_size(),), minval=-0.01, maxval=0.01
+        )
         # Initialize pipeline state
         pipeline_state = self.pipeline_init(qpos, qvel)
         obs = self._get_obs(pipeline_state, jp.zeros(self.sys.act_size()))
