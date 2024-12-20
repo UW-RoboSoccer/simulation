@@ -10,7 +10,7 @@ from copy import deepcopy
 import pickle
 
 HUMANOID_SCENE_PATH = Path('.') / "assets" / "humanoid" / "humanoid.xml"
-OP3_SCENE_PATH = Path('.') / "assets" / "op3" / "scene.xml"
+OP3_SCENE_PATH = Path('.') / "assets" / "kicking" / "scene.xml"
 BUILD_SCENE_PATH = Path('.') / "assets" / "build" / "build.xml"
 
 def build_rollout(model_path, n_steps=500):

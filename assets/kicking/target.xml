@@ -1,4 +1,4 @@
-<mujoco model="target"
+<mujoco model="target">
     <compiler angle="degree" inertiafromgeom="true"/>
 
     <asset>
@@ -6,14 +6,14 @@
         <texture name="target_texture" type="2d" builtin="checker" rgb1="0.8 0.8 0.8" rgb2="0.2 0.2 0.2" width="100" height="100" mark="cross" markrgb="1 0 0" />
         <!-- <texture name="target_texture" type="2d" file="target_mat.png" /> -->
 
-        <mesh name="target_mesh" file="target.stl" scale="1 1 0.01"/>
+        <mesh name="target_mesh" file="target.stl" scale="0.3 0.1 0.3"/>
 
     </asset>
 
     <worldbody>
-        <body name="target" pos="2 0 0.5" gravcomp="1">
+        <body name="target" pos="2 0 0.5" gravcomp="0">
             <joint name="target_joint" type="free"/>
-            <geom name="target_geom" type="mesh" mesh="target_mesh" material="target_mat" contype="1" conaffinity="1" quat="0.707 0 0.707 0"/>
+            <geom name="target_geom" type="mesh" mesh="target_mesh" material="target_mat" contype="1" conaffinity="1" quat="0.707 0 0 0.707"/>
             <inertial mass="0" pos="0 0 0"/>
         </body>
     </worldbody>
