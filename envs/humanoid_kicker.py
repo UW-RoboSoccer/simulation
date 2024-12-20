@@ -24,23 +24,8 @@ VELOCITY_SIZE = 6 # = linear (3) + angular velocity (3)
 
 class HumanoidKicker(PipelineEnv):
     def __init__(self, **kwargs):
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-        path = os.path.join(os.path.dirname(__file__), "..", "assets", "kicking", "scene.xml" )
-=======
+
         path = os.path.join(os.path.dirname(__file__), "..", "assets", "kicking", "combined.xml" )
->>>>>>> Stashed changes
-=======
-        path = os.path.join(os.path.dirname(__file__), "..", "assets", "kicking", "combined.xml" )
->>>>>>> Stashed changes
-=======
-        path = os.path.join(os.path.dirname(__file__), "..", "assets", "kicking", "combined.xml" )
->>>>>>> Stashed changes
-=======
-        path = os.path.join(os.path.dirname(__file__), "..", "assets", "kicking", "combined.xml" )
->>>>>>> Stashed changes
         mj_model = mujoco.MjModel.from_xml_path(str(path))
         self.mj_data = mujoco.MjData(mj_model)
         self.mjx_model = mjx.put_model(mj_model)
@@ -238,13 +223,21 @@ class HumanoidKicker(PipelineEnv):
         print('pipeline_state.contacts:', pipeline_state.contacts)
 
         contact_forces = jp.zeros((2, 3))
+        contact_forces = jp.zeros((2, 3))
 
         for contact in pipeline_state.contacts:
             if contact.geom1 == self.lFootid:
                 contact_forces[0] = contact.force
             elif contact.geom1 == self.rFootid:
                 contact_forces[1] = contact.force
+        for contact in pipeline_state.contacts:
+            if contact.geom1 == self.lFootid:
+                contact_forces[0] = contact.force
+            elif contact.geom1 == self.rFootid:
+                contact_forces[1] = contact.force
 
+        print('contact_forces 1:', contact_forces[0])
+        print('contact_forces 2:', contact_forces[1])
         print('contact_forces 1:', contact_forces[0])
         print('contact_forces 2:', contact_forces[1])
 
