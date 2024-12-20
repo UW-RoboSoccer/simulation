@@ -2,16 +2,16 @@
     <compiler angle="degree" inertiafromgeom="true"/>
 
     <asset>
-        <!-- Define the material for the ball -->
         <material name="ball_mat" rgba="0 1 0 1" specular="0.5" shininess="0.5"/>
         <texture builtin="gradient" height="100" rgb1=".4 .5 .6" rgb2="0 0 0" type="skybox" width="100"/>
+
+        <mesh name="ball_mesh" file="soccerball2.stl" scale="0.0714 0.0714 0.0714"/>
     </asset>
+
     <worldbody>
-        <!-- <geom conaffinity="1" condim="3" friction="1 .1 .1" material="MatPlane" name="floor" pos="0 0 0" size="20 20 0.125" type="plane" rgba="0.5 0.5 0.5 1.0"/> -->
-        <!-- Define the ball body -->
         <body name="ball" pos="1 1 1">
             <joint name="ball_joint" type="free"/>
-            <geom name="ball_geom" contype="1" conaffinity="1" type="sphere" size="0.0714" material="ball_mat" solref="0.01 0.0003" solimp="0.99 0.99 0.1"/>
+            <geom name="ball_geom" type="mesh" mesh="ball_mesh" material="ball_mat" contype="1" conaffinity="1" solref="0.01 0.0003" solimp="0.99 0.99 0.1"/>
         </body>
     </worldbody>
 </mujoco>
