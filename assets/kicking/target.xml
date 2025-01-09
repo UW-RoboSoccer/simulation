@@ -6,7 +6,7 @@
         <texture name="target_texture" type="2d" builtin="checker" rgb1="0.8 0.8 0.8" rgb2="0.2 0.2 0.2" width="100" height="100" mark="cross" markrgb="1 0 0" />
         <!-- <texture name="target_texture" type="2d" file="target_mat.png" /> -->
 
-        <mesh name="target_mesh" file="target.stl" scale="0.3 0.1 0.3"/>
+        <mesh name="target_mesh" file="Part Studio 1.stl" scale="0.3 0.1 0.3"/>
 
     </asset>
 
