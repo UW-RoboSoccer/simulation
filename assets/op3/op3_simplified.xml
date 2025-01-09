@@ -62,6 +62,10 @@
     <position kp="21.1" ctrlrange="-3.141592 3.141592" forcerange="-5 5"/>
     <default class="visual">
       <geom material="black" group="2"/>
+      <default class="foot">
+        <geom mass="0" type="box"/>
+      </default>
+
     </default>
   </default>
 
@@ -70,6 +74,7 @@
     <body name="body_link" pos="0 0 0.3">
       <inertial pos="-0.01501 0.00013 0.06582" quat="0.704708 0.704003 0.0667707 -0.0575246" mass="1.34928"
         diaginertia="0.00341264 0.00316574 0.00296931"/>
+      <site name="IMU"/>
       <freejoint/>
       <geom mesh="bodyc" class="visual"/>
       <site name="torso"/>
@@ -189,6 +194,8 @@
                   <joint name="r_ank_roll" axis="1 0 0"/>
                   <geom mesh="rl6c" class="visual"/>
                   <geom mesh="rl6c" />
+                  <geom class="foot" pos="0.024 -0.013 -0.0265" size="0.0635 0.028 0.004"/>
+                  <geom class="foot" pos="0.024 -0.0125 -0.0265" size="0.057 0.039 0.004"/>
                 </body>
               </body>
             </body>
@@ -197,6 +204,12 @@
       </body>
     </body>
   </worldbody>
+
+  <sensor>
+    <accelerometer name="accel" site="IMU"/>
+    <gyro name="gyro" site="IMU"/>
+  </sensor>
+
 
   <contact>
     <exclude body1="body_link" body2="body_link"/>
