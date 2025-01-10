@@ -1,22 +1,13 @@
-from brax import base
 from brax import envs
-from brax import math
-from brax.base import Base, Motion, Transform
-from brax.base import State as PipelineState
-from brax.envs.base import Env, PipelineEnv, State
-from brax.mjx.base import State as MjxState
 from brax.training.agents.ppo import train as ppo
-from brax.training.agents.ppo import networks as ppo_networks
-from brax.io import html, mjcf, model
 
-import datetime
+from datetime import datetime
 
 from envs.humanoid_standup import HumanoidStandup
 
 import functools
 
 import jax
-from jax import numpy as jp
 
 from matplotlib import pyplot as plt
 

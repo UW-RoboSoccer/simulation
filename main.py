@@ -22,6 +22,9 @@ mjx_data = mjx.put_data(mj_model, mj_data)
 mj_data.qpos[3:7] = jax.random.uniform(jax.random.PRNGKey(time.time_ns()), (4,), jp.float32, minval=-1, maxval=1)
 mj_data.qpos[3:7] /= jp.linalg.norm(mj_data.qpos[3:7])  # Normalize to get a valid quaternion
 
+# Randomize base initial height
+mj_data.qpos[2] = jax.random.uniform(jax.random.PRNGKey(time.time_ns()), (), jp.float32, minval=0.8, maxval=10)
+
 # Randomize joint positions
 mj_data.qpos[7:] = jax.random.uniform(jax.random.PRNGKey(time.time_ns()), (mj_data.qpos[7:].shape[0],), jp.float32, minval=-1, maxval=1)
 
