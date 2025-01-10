@@ -1,0 +1,126 @@
+<mujoco model="pitch">
+
+  <include file="ball.xml"/>
+  <include file="target.xml"/>
+
+  <compiler boundmass="1e-5" boundinertia="1e-11" coordinate="local" angle="radian" eulerseq="xyz"/>
+  <option timestep="0.002" cone="elliptic" noslip_iterations="5" noslip_tolerance="0"/>
+  
+  <visual>
+    <quality shadowsize="8192"/>
+    <headlight ambient="0.3 0.3 0.3" diffuse="0.6 0.6 0.6" specular="0 0 0"/>
+    <map znear="0.1111" zfar="45"/>
+    <scale forcewidth="0.01" contactwidth="0.06" contactheight="0.01" jointwidth="0.01" framelength="0.3" framewidth="0.01"/>
+  </visual>
+  
+  <statistic extent="0.9" center="0 0 0.9"/>
+  
+  <default>
+    <geom condim="3" friction="1 0.5 0.5" solimp=".9 .99 .003" solref=".015 1"/>
+    <joint limited="true" damping="1" armature="0.01"/>
+    <default class="home_goal">
+      <geom rgba="0.2 0.2 1 1"/>
+    </default>
+    <default class="away_goal">
+      <geom rgba="1 0.2 0.2 1"/>
+    </default>
+    <default class="field">
+      <geom rgba="1 1 1 1"/>
+    </default>
+  </default>
+
+  <asset>
+    <texture name="skybox" type="skybox" builtin="gradient" rgb1="0.7 0.9 0.9" rgb2="0.03 0.09 0.27" width="400" height="400"/>
+    <texture name="fieldplane" type="2d" file="pitchImage.png"/>
+    <material name="fieldplane" texture="fieldplane"/>
+  </asset>
+
+  <worldbody>
+    <light name="light_0" pos="-9 -6 5" dir="9 6 -10" cutoff="60"/>
+    <light name="light_1" pos="-9 6 5" dir="9 -6 -10" cutoff="60"/>
+    <light name="light_2" pos="9 -6 5" dir="-9 6 -10" cutoff="60"/>
+    <light name="light_3" pos="9 6 5" dir="-9 -6 -10" cutoff="60"/>
+    
+    <camera name="top_down" fovy="11.89" pos="0 0 95" zaxis="0 0 1"/>
+    
+    <!-- Static ground and boundaries -->
+    <geom name="ground" type="plane" size="9 6 0.09" material="fieldplane"/>
+    <geom name="bound_1" type="box" contype="0" conaffinity="0" size="0.6 0.6 0.01" pos="-8.4 -5.4 0" rgba="0.5 0.5 0.5 0.3"/>
+    <geom name="bound_2" type="box" contype="0" conaffinity="0" size="0.6 4.8 0.01" pos="-8.4 0 0" rgba="0.5 0.5 0.5 0.3"/>
+    <geom name="bound_3" type="box" contype="0" conaffinity="0" size="0.6 0.6 0.01" pos="-8.4 5.4 0" rgba="0.5 0.5 0.5 0.3"/>
+    <geom name="bound_4" type="box" contype="0" conaffinity="0" size="7.8 0.6 0.01" pos="0 -5.4 0" rgba="0.5 0.5 0.5 0.3"/>
+    <geom name="bound_5" type="box" contype="0" conaffinity="0" size="7.8 0.6 0.01" pos="0 5.4 0" rgba="0.5 0.5 0.5 0.3"/>
+    <geom name="bound_6" type="box" contype="0" conaffinity="0" size="0.6 0.6 0.01" pos="8.4 -5.4 0" rgba="0.5 0.5 0.5 0.3"/>
+    <geom name="bound_7" type="box" contype="0" conaffinity="0" size="0.6 4.8 0.01" pos="8.4 0 0" rgba="0.5 0.5 0.5 0.3"/>
+    <geom name="bound_8" type="box" contype="0" conaffinity="0" size="0.6 0.6 0.01" pos="8.4 5.4 0" rgba="0.5 0.5 0.5 0.3"/>
+    
+    <!-- Root body with mass properties -->
+    <body name="root" pos="0 0 0">
+      <joint type="free"/>
+      <inertial pos="0 0 0" mass="1" diaginertia="1 1 1"/>
+      
+      <!-- Home Goal -->
+      <body name="home_goal" pos="-8.4 0 0">
+        <inertial pos="0 0 1.2" mass="10" diaginertia="10 10 10"/>
+        <site name="home_goal/detection_zone" type="box" group="4" rgba="0.2 0.2 1 0.5" size="0.6 2.6 1.2" pos="0 0 1.2"/>
+        <site name="home_goal/lower" group="4" rgba="0.2 0.2 1 0.5" size="0.05" pos="-0.6 -2.6 0"/>
+        <site name="home_goal/mid" group="4" rgba="0.2 0.2 1 0.5" size="0.05" pos="0 0 1.2"/>
+        <site name="home_goal/upper" group="4" rgba="0.2 0.2 1 0.5" size="0.05" pos="0.6 2.6 2.4"/>
+        
+        <geom name="home_goal/right_post" class="home_goal" type="capsule" size="0.1027" fromto="0.6 -2.6 0 0.6 -2.6 2.4"/>
+        <geom name="home_goal/left_post" class="home_goal" type="capsule" size="0.1027" fromto="0.6 2.6 0 0.6 2.6 2.4"/>
+        <geom name="home_goal/top_post" class="home_goal" type="capsule" size="0.1037" fromto="0.6 -2.6 2.4 0.6 2.6 2.4"/>
+        <geom name="home_goal/right_base" class="home_goal" type="capsule" size="0.1027" fromto="0.6 -2.6 0 -0.6 -2.6 0"/>
+        <geom name="home_goal/left_base" class="home_goal" type="capsule" size="0.1027" fromto="0.6 2.6 0 -0.6 2.6 0"/>
+        <geom name="home_goal/back_base" class="home_goal" type="capsule" size="0.1027" fromto="-0.6 -2.6 0 -0.6 2.6 0"/>
+        
+        <geom name="home_goal/right_support" class="home_goal" type="capsule" size="0.077" fromto="-0.6 -2.6 0 0.12 -2.6 2.4"/>
+        <geom name="home_goal/right_top_support" class="home_goal" type="capsule" size="0.0778" fromto="0.12 -2.6 2.4 0.6 -2.6 2.4"/>
+        <geom name="home_goal/left_support" class="home_goal" type="capsule" size="0.077" fromto="-0.6 2.6 0 0.12 2.6 2.4"/>
+        <geom name="home_goal/left_top_support" class="home_goal" type="capsule" size="0.0778" fromto="0.12 2.6 2.4 0.6 2.6 2.4"/>
+      </body>
+      
+      <!-- Away Goal -->
+      <body name="away_goal" pos="8.4 0 0">
+        <inertial pos="0 0 1.2" mass="10" diaginertia="10 10 10"/>
+        <site name="away_goal/detection_zone" type="box" group="4" rgba="1 0.2 0.2 0.5" size="0.6 2.6 1.2" pos="0 0 1.2"/>
+        <site name="away_goal/lower" group="4" rgba="1 0.2 0.2 0.5" size="0.05" pos="-0.6 -2.6 0"/>
+        <site name="away_goal/mid" group="4" rgba="1 0.2 0.2 0.5" size="0.05" pos="0 0 1.2"/>
+        <site name="away_goal/upper" group="4" rgba="1 0.2 0.2 0.5" size="0.05" pos="0.6 2.6 2.4"/>
+        
+        <geom name="away_goal/right_post" class="away_goal" type="capsule" size="0.1027" fromto="-0.6 2.6 0 -0.6 2.6 2.4"/>
+        <geom name="away_goal/left_post" class="away_goal" type="capsule" size="0.1027" fromto="-0.6 -2.6 0 -0.6 -2.6 2.4"/>
+        <geom name="away_goal/top_post" class="away_goal" type="capsule" size="0.1037" fromto="-0.6 2.6 2.4 -0.6 -2.6 2.4"/>
+        <geom name="away_goal/right_base" class="away_goal" type="capsule" size="0.1027" fromto="-0.6 2.6 0 0.6 2.6 0"/>
+        <geom name="away_goal/left_base" class="away_goal" type="capsule" size="0.1027" fromto="-0.6 -2.6 0 0.6 -2.6 0"/>
+        <geom name="away_goal/back_base" class="away_goal" type="capsule" size="0.1027" fromto="0.6 2.6 0 0.6 -2.6 0"/>
+        
+        <geom name="away_goal/right_support" class="away_goal" type="capsule" size="0.077" fromto="0.6 2.6 0 -0.12 2.6 2.4"/>
+        <geom name="away_goal/right_top_support" class="away_goal" type="capsule" size="0.0778" fromto="-0.12 2.6 2.4 -0.6 2.6 2.4"/>
+        <geom name="away_goal/left_support" class="away_goal" type="capsule" size="0.077" fromto="0.6 -2.6 0 -0.12 -2.6 2.4"/>
+        <geom name="away_goal/left_top_support" class="away_goal" type="capsule" size="0.0778" fromto="-0.12 -2.6 2.4 -0.6 -2.6 2.4"/>
+      </body>
+      
+      <!-- Field -->
+      <body name="field" pos="0 0 0">
+        <inertial pos="0 0 0" mass="1" diaginertia="1 1 1"/>
+        <site name="field/detection_zone" class="field" type="box" group="4" size="7.8 4.8 0.01"/>
+        <site name="field/lower" class="field" group="4" size="0.05" pos="-7.8 -4.8 0"/>
+        <site name="field/mid" class="field" group="4" size="0.05" pos="0 0 0"/>
+        <site name="field/upper" class="field" group="4" size="0.05" pos="7.8 4.8 0"/>
+      </body>
+    </body>
+  </worldbody>
+
+  <sensor>
+    <framepos name="home_goal/home_goal_lower" objtype="site" objname="home_goal/lower"/>
+    <framepos name="home_goal/home_goal_mid" objtype="site" objname="home_goal/mid"/>
+    <framepos name="home_goal/home_goal_upper" objtype="site" objname="home_goal/upper"/>
+    <framepos name="away_goal/away_goal_lower" objtype="site" objname="away_goal/lower"/>
+    <framepos name="away_goal/away_goal_mid" objtype="site" objname="away_goal/mid"/>
+    <framepos name="away_goal/away_goal_upper" objtype="site" objname="away_goal/upper"/>
+    <framepos name="field/field_lower" objtype="site" objname="field/lower"/>
+    <framepos name="field/field_mid" objtype="site" objname="field/mid"/>
+    <framepos name="field/field_upper" objtype="site" objname="field/upper"/>
+  </sensor>
+</mujoco>
