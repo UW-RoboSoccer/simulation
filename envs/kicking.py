@@ -18,7 +18,7 @@ import os
 class HumanoidKick(PipelineEnv):
     def __init__(self, **kwargs):
         
-        path = os.path.join(os.path.dirname(__file__), 'humanoid_pos.xml')
+        path = os.path.join(os.path.dirname(__file__), "..", "assets", "humanoid", "humanoid_pos.xml")
         mj_model = mujoco.MjModel.from_xml_path(str(path))
         self.mj_data = mujoco.MjData(mj_model)
         self.mjx_model = mjx.put_model(mj_model)
@@ -113,8 +113,12 @@ class HumanoidKick(PipelineEnv):
         lin_accel = self.sensorData['accel'][0]  
         ang_accel = self.sensorData['gyro'][0]
 
-        print('Linear Acceleration', lin_accel)
-        print('Angular Acceleration', ang_accel)
+        # print('Linear Acceleration', lin_accel)
+        # print('Angular Acceleration', ang_accel)
+
+
+        # x = jp.concatenate([position, velocity, lin_accel, ang_accel])
+        # print('observation space shape', x.size)
 
         # Combine arrays for output
         return jp.concatenate([
@@ -126,13 +130,12 @@ class HumanoidKick(PipelineEnv):
         ])
 
 
-    # envs.register_environment('kicker', HumanoidKick)
+envs.register_environment('kicker', HumanoidKick)
 
-
-#test shit
 env = HumanoidKick()
 rng = jax.random.PRNGKey(0)
 
 state = env.reset(rng)
+obs = env._get_obs(state.pipeline_state, jp.zeros(env.sys.act_size()))
 
 print("Initial State:")

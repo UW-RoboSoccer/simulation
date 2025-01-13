@@ -12,6 +12,8 @@ from brax.io import model, html
 
 from IPython.core.display import HTML
 
+from envs.kicking import HumanoidKick
+
 env_name = 'kicker'
 env = envs.get_environment(env_name)
 
@@ -40,6 +42,8 @@ def gen_rollout(env, model_path=None, n_steps=500):
         if jit_inference_fn:
             act_rng, rng = jax.random.split(rng)
             obs = env._get_obs(state.pipeline_state)
+            print('Linear acceleration:', obs[47:50])
+            print('Angular velocity:', obs[50:-1])
             ctrl, _ = jit_inference_fn(obs, act_rng)
         else:
             ctrl = jp.zeros(env.sys.nu)
