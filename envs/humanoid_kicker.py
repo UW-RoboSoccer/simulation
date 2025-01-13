@@ -28,7 +28,11 @@ def stabilization_reward(pipeline_state: base.State, action: jp.ndarray, obs, ta
     control_cost = 0.01 * jp.sum(jp.square(action))
 
     reward = height_reward + 1 - control_cost
-    return reward
+
+    fallen_threshold = 0.5
+    done = torso_height < fallen_threshold
+    
+    return reward, done
 
 def calculate_kick_reward(pipeline_state: base.State, action: jp.ndarray, obs):
 
@@ -137,9 +141,16 @@ class HumanoidKicker(PipelineEnv):
         # Extract positions
 
         # Calculate reward
+<<<<<<< HEAD
         kickReward, done = calculate_kick_reward(pipeline_state, action, obs)
         standReward = stabilization_reward(pipeline_state, action, obs)
+=======
+        kickReward, doneKick = calculate_kick_reward(pipeline_state, action)
+        standReward, doneStand = stabilization_reward(pipeline_state, action)
+>>>>>>> 19a86dc (saving)
         
+        done = doneKick + doneStand
+
         #Control cost already calculated in both functions^
         reward = kickReward + standReward #need to linearly decrease one and increase the other.
 
@@ -155,6 +166,7 @@ class HumanoidKicker(PipelineEnv):
         # Return updated state
         return state.replace(pipeline_state=pipeline_state, obs=obs, reward=reward, done=done)
 
+<<<<<<< HEAD
     def _get_obs(
         self, pipeline_state: base.State, action: jax.Array
     ) -> jax.Array:
@@ -209,3 +221,64 @@ class HumanoidKicker(PipelineEnv):
     #         jp.sum(jax.vmap(jp.multiply)(inertia.mass, x_i.pos), axis=0) / mass_sum
     #     )
     #     return com, inertia, mass_sum, x_i
+=======
+    def _get_obs(self, pipeline_state: base.State):
+        """Get complete state observation for humanoid kicker environment."""
+        # Get center of mass data using class method
+        com_pos, com_vel = self._com(pipeline_state)
+        
+        # Core body state
+        qpos = pipeline_state.qp.pos
+        qvel = pipeline_state.qp.vel
+        cinr = pipeline_state.qp.cinr
+        
+        # Torso state (root body)
+        torso_pos = qpos[0, :3]
+        torso_rot = qpos[0, 3:7]
+        torso_vel = qvel[0, :3]
+        ang_vel = qvel[0, 3:6]
+        
+        # Joint and actuator states
+        joint_pos = qpos[1:]
+        joint_vel = qvel[1:]
+        qfrc_actuator = pipeline_state.qf.qfrc_actuator
+        
+        # Relative body positions to COM
+        xd_i = qpos[:, :3] - com_pos[None]
+        
+        # Ball state (second to last body)
+        ball_pos = pipeline_state.qp.pos[-2, :3]
+        ball_vel = pipeline_state.qp.vel[-2, :3]
+        
+        # Target state (last body)
+        target_pos = pipeline_state.qp.pos[-1, :3]
+        
+        obs = jp.concatenate([
+            com_pos,           # 3 - COM position from _com()
+            com_vel,          # 3 - COM velocity from _com()
+            cinr.flatten(),   # 9 - Centroidal inertia
+            torso_pos,        # 3 - Torso position
+            torso_rot,        # 4 - Torso rotation
+            torso_vel,        # 3 - Torso linear velocity
+            ang_vel,          # 3 - Torso angular velocity
+            joint_pos,        # n - Joint positions
+            joint_vel,        # n - Joint velocities
+            qfrc_actuator,    # n - Actuator forces
+            xd_i.flatten(),   # 3*n_bodies - Body positions relative to COM
+            ball_pos,         # 3 - Ball position
+            ball_vel,         # 3 - Ball velocity
+            target_pos,       # 3 - Target position
+        ])
+        
+        return obs
+    
+    def _com(self, pipeline_state: base.State) -> jax.Array:
+        inertia = self.sys.link.inertia
+        mass_sum = jp.sum(inertia.mass)
+        x_i = pipeline_state.x.vmap().do(inertia.transform)
+        com = (
+            jp.sum(jax.vmap(jp.multiply)(inertia.mass, x_i.pos), axis=0) / mass_sum
+        )
+        return com, inertia, mass_sum, x_i
+    
+>>>>>>> 19a86dc (saving)
