@@ -12,7 +12,7 @@ from brax.io import model, html
 
 from IPython.core.display import HTML
 
-env_name = 'humanoid'
+env_name = 'kicker'
 env = envs.get_environment(env_name)
 
 def gen_rollout(env, model_path=None, n_steps=500):
