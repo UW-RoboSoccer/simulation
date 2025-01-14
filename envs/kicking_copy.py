@@ -19,10 +19,12 @@ import os
 class HumanoidKick(PipelineEnv):
     def __init__(self, **kwargs):
         
-        path = os.path.join(os.path.dirname(__file__), 'humanoid_pos.xml')
+        path = os.path.join(os.path.dirname(__file__), "..", "assets", "kicking", "combined.xml")
         mj_model = mujoco.MjModel.from_xml_path(str(path))
+
         self.mj_data = mujoco.MjData(mj_model)
         self.mjx_model = mjx.put_model(mj_model)
+
 
         sys = mjcf.load_model(mj_model)
         self.sys = sys
@@ -45,9 +47,12 @@ class HumanoidKick(PipelineEnv):
         self.left_foot_geom_id = support.name2id(mj_model, mujoco.mjtObj.mjOBJ_GEOM, 'leftFoot')
         self.right_foot_geom_id = support.name2id(mj_model, mujoco.mjtObj.mjOBJ_GEOM, 'rightFoot')
 
-        print(self.left_foot_geom_id, self.right_foot_geom_id, self.floor_geom_id)
+        # for foot and ball contacts 
+        self.ball_geom_id = support.name2id(mj_model, mujoco.mjtObj.mjOBJ_GEOM, 'ball')
+        self.target_geom_id = support.name2id(mj_model, mujoco.mjtObj.mjOBJ_GEOM, 'target') 
 
-        self.humanoid_links = ['torso', 'lwaist', 'pelvis', 'right_thigh', 'right_shin', 'left_thigh', 'left_shin', 'right_upper_arm', 'right_lower_arm', 'left_upper_arm', 'left_lower_arm'] 
+
+        print(self.left_foot_geom_id, self.right_foot_geom_id, self.floor_geom_id)
 
 
 
@@ -119,6 +124,12 @@ class HumanoidKick(PipelineEnv):
         self.sensorData['accel'].append(self.mj_data.sensor('accel').data.copy())
         self.sensorData['gyro'].append(self.mj_data.sensor('gyro').data.copy())
 
+        right_contact_force, left_contact_force = self.get_gait_contact(pipeline_state)
+        print("right contact force", right_contact_force, "left contact force", left_contact_force)
+
+
+
+
         #add actuator values to observation space
 
         # add target and ball positions
@@ -139,12 +150,11 @@ class HumanoidKick(PipelineEnv):
         ])
 
 
-    def get_gait_contact(self,  pipeline_state: base.State): 
-        forces = jp.array([support.contact_force(self.mjx_model, pipeline_state.data, i) for i in range(pipeline_state.data.ncon)])
-        dx = pipeline_state.data
+    def get_gait_contact(self, pipeline_state: base.State): 
+        forces = jp.array([support.contact_force(self.mjx_model, self.mj_data, i) for i in range(self.mj_data.ncon)])
 
-        right_contacts = dx.contact.geom ==  jp.array([self.floor_geom_id, self.right_foot_geom_id])
-        left_contacts = dx.contact.geom == jp.array([self.floor_geom_id, self.left_foot_geom_id])
+        right_contacts = pipeline_state.contact.geom ==  jp.array([self.floor_geom_id, self.right_foot_geom_id])
+        left_contacts = pipeline_state.contact.geom == jp.array([self.floor_geom_id, self.left_foot_geom_id])
 
         right_contact_mask = jp.sum(right_contacts, axis=1) == 2
         left_contact_mask = jp.sum(left_contacts, axis=1) == 2
@@ -154,7 +164,40 @@ class HumanoidKick(PipelineEnv):
         total_left_forces = jp.sum(forces * left_contact_mask[:, None], axis=0)
 
         return math.normalize(total_right_forces[:3])[1], math.normalize(total_left_forces[:3])[1]
+    
+    
+    def get_contact_forces(self, pipeline_state: base.State, forces, geom_id_1, geom_id_2):
+        contacts = pipeline_state.contact.geom == jp.array([geom_id_1, geom_id_2])
+        contact_mask = jp.sum(contacts, axis=1) == 2
+        total_forces = jp.sum(forces * contact_mask[:, None], axis=0)
+        return total_forces
 
+
+    def get_all_contacts(self, pipeline_state: base.State): 
+        forces = jp.array([support.contact_force(self.mjx_model, self.mj_data, i) for i in range(self.mj_data.ncon)])
+
+        # 1) Gait contacts
+        total_right_gait_forces = self.get_contact_forces(pipeline_state, forces, self.floor_geom_id, self.right_foot_geom_id)
+        total_left_gait_forces = self.get_contact_forces(pipeline_state, forces, self.floor_geom_id, self.left_foot_geom_id)
+
+        # 2) Ball contacts
+        total_right_ball_forces = self.get_contact_forces(pipeline_state, forces, self.ball_geom_id, self.right_foot_geom_id)
+        total_left_ball_forces = self.get_contact_forces(pipeline_state, forces, self.ball_geom_id, self.left_foot_geom_id)
+
+        # 3) Ball and target contacts
+        total_ball_target_forces = self.get_contact_forces(pipeline_state, forces, self.ball_geom_id, self.target_geom_id)
+
+        return (
+            math.normalize(total_right_gait_forces[:3])[1],
+            math.normalize(total_left_gait_forces[:3])[1],
+            math.normalize(total_right_ball_forces[:3])[1],
+            math.normalize(total_left_ball_forces[:3])[1],
+            math.normalize(total_ball_target_forces[:3])[1]
+        )
+
+
+
+    
     # envs.register_environment('kicker', HumanoidKick)
 
 
