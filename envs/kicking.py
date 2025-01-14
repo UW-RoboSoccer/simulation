@@ -5,14 +5,13 @@ from brax.io import mjcf
 from brax import base
 from brax.base import Transform
 
-import brax.math
+from brax import math
 import jax
 from jax import numpy as jp
 
 import mujoco
 from mujoco import mjx
 from mujoco.mjx._src import support
-
 import os
 
 class HumanoidKick(PipelineEnv):
@@ -26,36 +25,39 @@ class HumanoidKick(PipelineEnv):
         sys = mjcf.load_model(mj_model)
         self.sys = sys
 
+        self.reset_noise_scale = 1e-2
+
         super().__init__(self.sys, backend='mjx', **kwargs)
 
         self.sensorData = { 'accel': [],
                             'gyro' : []}
 
         self.links = self.sys.link_names
-        print(self.links)
 
         self.sensorData['accel'].append(self.mj_data.sensor('accel').data.copy())
         self.sensorData['gyro'].append(self.mj_data.sensor('gyro').data.copy())
-        print(self.sensorData)
 
+        #contact forces
+        self.floor_geom_id = support.name2id(mj_model, mujoco.mjtObj.mjOBJ_GEOM, 'floor')
+        self.left_foot_geom_id = support.name2id(mj_model, mujoco.mjtObj.mjOBJ_GEOM, 'left_foot')
+        self.right_foot_geom_id = support.name2id(mj_model, mujoco.mjtObj.mjOBJ_GEOM, 'right_foot')
         
-    #in another file, define helper functions like get_link_index and import
-    # def _get_link_index(self, name):
-    #     return self.sys.find_name(name)
-
     def reset(self, rng: jp.ndarray) -> State:
         rng, rng1, rng2 = jax.random.split(rng, 3)
 
+        low, hi = -self.reset_noise_scale, self.reset_noise_scale
+
         humanoid_qpos = self.sys.init_q + jax.random.uniform(
-            rng1, (self.sys.q_size(),), jp.float32, minval=-1, maxval=1
+            rng1, (self.sys.q_size(),), jp.float32, minval=low, maxval=hi
         )
 
         humanoid_qvel = jax.random.uniform(
-            rng2, (self.sys.qd_size(),), minval=-1, maxval=1
+            rng2, (self.sys.qd_size(),), minval=low, maxval=hi
         )
 
         # reset ball and target when implemented later
 
+        #concatenate ball and target positions and velocites into this below
         qpos = jp.concatenate([humanoid_qpos])
         qvel = jp.concatenate([humanoid_qvel])
 
@@ -66,8 +68,11 @@ class HumanoidKick(PipelineEnv):
         metrics = {
             'stabilizeReward': 0,
             'kickReward': 0,
+            'accelerometer': jp.zeros(self.sensorData['accel'][0].shape),
+            'gyroscope': jp.zeros(self.sensorData['gyro'][0].shape),
+            'contactForces': jp.zeros(len(self.get_gait_contact(pipeline_state))),
         }
-        print('end of reset function')
+        # print('end of reset function')
         done = True
         return State(pipeline_state, obs, reward, done, metrics)
 
@@ -88,12 +93,18 @@ class HumanoidKick(PipelineEnv):
         done = False #for now
         reward = 10
 
+        
         metrics = {
             'stabilizeReward': 0,
             'kickReward': 0,
+            'accelerometer': self.sensorData['accel'][0],
+            'gyroscope': self.sensorData['gyro'][0],
+            'contactForces': self.get_gait_contact(pipeline_state),
         }
 
+
         state.metrics.update(metrics)
+        print(state.metrics)
 
         return state.replace(pipeline_state=pipeline_state, obs=obs, reward=reward, done=done)
 
@@ -107,6 +118,8 @@ class HumanoidKick(PipelineEnv):
         self.sensorData['gyro'].append(self.mj_data.sensor('gyro').data.copy())
 
         #add actuator values to observation space
+
+        contact_forces = self.get_gait_contact(pipeline_state)
 
         # add target and ball positions
 
@@ -128,6 +141,20 @@ class HumanoidKick(PipelineEnv):
             ang_accel,
             # Add actuators, ball, and target
         ])
+    
+    def get_gait_contact(self, pipeline_state: base.State):
+        forces = jp.array([support.contact_force(self.mjx_model, self.mj_data, i) for i in range(self.mj_data.ncon)])
+
+        right_contacts = pipeline_state.contact.geom == jp.array([self.floor_geom_id, self.right_foot_geom_id])
+        left_contacts = pipeline_state.contact.geom == jp.array([self.floor_geom_id, self.left_foot_geom_id])
+
+        right_contact_mask = jp.sum(right_contacts, axis=1) == 2
+        left_contact_mask = jp.sum(left_contacts, axis=1) == 2
+
+        total_right_forces = jp.sum(forces * right_contact_mask[:, None], axis=0)
+        total_left_forces = jp.sum(forces * left_contact_mask[:, None], axis=0)
+
+        return math.normalize(total_right_forces[:3])[1], math.normalize(total_left_forces[:3])[1]
 
 
 envs.register_environment('kicker', HumanoidKick)
@@ -138,4 +165,4 @@ rng = jax.random.PRNGKey(0)
 state = env.reset(rng)
 obs = env._get_obs(state.pipeline_state, jp.zeros(env.sys.act_size()))
 
-print("Initial State:")
+# print("Initial State:")
