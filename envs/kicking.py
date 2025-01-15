@@ -131,7 +131,9 @@ class HumanoidKick(PipelineEnv):
 
         #get contact force data
         right_contact_force, left_contact_force = self.get_gait_contact(pipeline_state)
-        # print('contact forces', right_contact_force, left_contact_force)
+        
+        #jax.debug.print("right force: {}, left force: {}", right_contact_force, left_contact_force)
+
         # contact_forces = jp.concatenate([right_contact_force, left_contact_force])
         #add actuator values to observation space
 
@@ -143,24 +145,30 @@ class HumanoidKick(PipelineEnv):
             velocity,
             lin_accel,
             ang_accel,
-            # right_contact_force,
-            # left_contact_force,
+            jp.expand_dims(right_contact_force, axis=0), # expanded for concatenation 
+            jp.expand_dims(left_contact_force, axis=0),
             # Add actuators, ball, and target
         ])
     
-    def get_gait_contact(self, pipeline_state: base.State): 
-        forces = jp.array([support.contact_force(self.mjx_model, self.mj_data, i) for i in range(self.mj_data.ncon)])
+    def get_gait_contact(self, pipeline_state: base.State):
+        # uses support function to model contact forces, see https://github.com/google-deepmind/mujoco/issues/1555
+        forces = jp.array([support.contact_force(self.mjx_model, pipeline_state, i) for i in range(pipeline_state.ncon)])
 
-        right_contacts = pipeline_state.contact.geom ==  jp.array([self.floor_geom_id, self.right_foot_geom_id])
+        # checks if, between 2 geoms, there is a point of contact (indicated by True, True)
+        right_contacts = pipeline_state.contact.geom == jp.array([self.floor_geom_id, self.right_foot_geom_id])
         left_contacts = pipeline_state.contact.geom == jp.array([self.floor_geom_id, self.left_foot_geom_id])
 
+        # creates a mask based on if there were contacts or not (True, True) == 2 
         right_contact_mask = jp.sum(right_contacts, axis=1) == 2
         left_contact_mask = jp.sum(left_contacts, axis=1) == 2
 
-        # Use masks to filter forces and sum them
+        # Use masks to filter forces based on contacts 
         total_right_forces = jp.sum(forces * right_contact_mask[:, None], axis=0)
         total_left_forces = jp.sum(forces * left_contact_mask[:, None], axis=0)
 
+        jax.debug.print("right force: {}, left force: {}", total_right_forces, total_left_forces)
+
+        # returns the y component of the contact forces
         return math.normalize(total_right_forces[:3])[1], math.normalize(total_left_forces[:3])[1]
 
     
@@ -172,7 +180,7 @@ class HumanoidKick(PipelineEnv):
 
 
     def get_all_contacts(self, pipeline_state: base.State): 
-        forces = jp.array([support.contact_force(self.mjx_model, self.mj_data, i) for i in range(self.mj_data.ncon)])
+        forces = jp.array([support.contact_force(self.mjx_model, pipeline_state, i) for i in range(pipeline_state.ncon)])
 
         # 1) Gait contacts
         total_right_gait_forces = self.get_contact_forces(pipeline_state, forces, self.floor_geom_id, self.right_foot_geom_id)
