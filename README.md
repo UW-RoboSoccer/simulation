@@ -48,3 +48,18 @@ pip install opencv-python-headless
 ```
 export LIBGL_ALWAYS_SOFTWARE=1
 ```
+
+**3) Verifying Display connection from WSL to Host**
+- If you are using VcXsrv to connect WSL/VM to your host Windows system try the following in the WSL terminal
+- Use XLaunch and configure the settings and check the box for Disable Access Control. Then check the Display setting
+```
+export DISPLAY=:0
+```
+- Use this to verify that the IP address of your display is correct. If 'nameserver:' appears before the IP address - something is incorrectly configured
+```
+echo $DISPLAY
+```
+- When you're done you should be able to run this default GUI. It should show a window of 3 spinning gears
+```
+glxgears
+```
