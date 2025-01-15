@@ -15,11 +15,13 @@ from mujoco import mjx
 from mujoco.mjx._src import support
 
 import os
+CONTACT_HISTORY_WINDOW = 0.2
+
 
 class HumanoidKick(PipelineEnv):
     def __init__(self, **kwargs):
         
-        path = os.path.join(os.path.dirname(__file__), "..", "assets", "humanoid", "humanoid_pos.xml")
+        path = os.path.join(os.path.dirname(__file__), "..", "assets", "humanoid", "modified_humanoid.xml")
         mj_model = mujoco.MjModel.from_xml_path(str(path))
 
         self.mj_data = mujoco.MjData(mj_model)
@@ -129,7 +131,7 @@ class HumanoidKick(PipelineEnv):
 
         #get contact force data
         right_contact_force, left_contact_force = self.get_gait_contact(pipeline_state)
-        print('contact forces', right_contact_force, left_contact_force)
+        # print('contact forces', right_contact_force, left_contact_force)
         # contact_forces = jp.concatenate([right_contact_force, left_contact_force])
         #add actuator values to observation space
 
