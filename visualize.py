@@ -3,7 +3,8 @@ from jax import numpy as jp
 
 import mujoco
 import mujoco.viewer
-from mujoco import mjx
+
+import pickle
 
 from brax import envs
 
@@ -11,11 +12,11 @@ from brax.training.agents.ppo import networks as ppo_networks
 from brax.io import model
 
 import cv2
-from PIL import Image
 
 from envs.kicking import HumanoidKick
 import os
 
+xml_path='assets/humanoid/modified_humanoid.xml'
 env_name = 'kicker'
 env = envs.get_environment(env_name)
 
@@ -38,30 +39,72 @@ def gen_rollout(env, model_path=None, n_steps=250):
 
     state = jit_reset(rng)
     rollout = [state.pipeline_state]
+    stats = [state.metrics]
+    info = [state.info]
 
     for i in range(n_steps):
         print('Step', i)
         if jit_inference_fn:
             act_rng, rng = jax.random.split(rng)
-            obs = env._get_obs(state.pipeline_state)
-            ctrl, _ = jit_inference_fn(obs, act_rng)
+            ctrl, _ = jit_inference_fn(state.obs, act_rng)
         else:
             ctrl = jp.zeros(env.sys.nu)
+
         state = jit_step(state, ctrl)
+        stats.append(state.metrics)
         rollout.append(state.pipeline_state)
+        info.append(state.info)
 
-    return rollout
+    return rollout, stats, info
 
-rollout = gen_rollout(env, n_steps=500)
+rollout, stats, info = gen_rollout(env, n_steps=500)
+
+import matplotlib.pyplot as plt
+
+total_reward = [stat['total_reward'] for stat in stats]
+velocity_reward = [stat['velocity_reward'] for stat in stats]
+base_height_reward = [stat['base_height_reward'] for stat in stats]
+base_acceleration_reward = [stat['base_acceleration_reward'] for stat in stats]
+feet_contact_reward = [stat['feet_contact_reward'] for stat in stats]
+action_difference_reward = [stat['action_diff_reward'] for stat in stats]
+
+#Plot Stabilization Metrics
+plt.figure(figsize=(12, 8))
+plt.plot(total_reward, label='Total Reward')
+plt.plot(velocity_reward, label='Velocity Reward')
+plt.plot(base_height_reward, label='Base Height Reward')
+plt.plot(base_acceleration_reward, label='Base Acceleration Reward')
+plt.plot(feet_contact_reward, label='Feet Contact Reward')
+plt.plot(action_difference_reward, label='Action Difference Reward')
+plt.xlabel('Time Step')
+plt.ylabel('Reward')
+plt.title('Reward Metrics Over Time')
+plt.legend()
+plt.savefig('output/metrics.png')
+
+# Save rollout to pkl file
+with open('output/rollout.pkl', 'wb') as f:
+    pickle.dump(rollout, f)
+    
+if rollout is None:
+    with open('output/rollout.pkl', 'rb') as f:
+        rollout = pickle.load(f)
+
 images = env.render(rollout, width=640, height=480)
 
 running = True
 
 while running:
     for i, image in enumerate(images):
+        # image = cv2.putText(image, f'Height: {info[i]["base_height"]:.2f}', 
+        # (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1, cv2.LINE_AA)
+        
+        # image = cv2.putText(image, f'Orientation: {info[i]["base_orientation"]}', 
+        # (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1, cv2.LINE_AA)
+
         # correct color channels
         image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-        cv2.imshow('image', image)
+        cv2.imshow('simulation', image)
         if cv2.waitKey(10) & 0xFF == ord('q'):
             running = False
             break
@@ -70,7 +113,7 @@ cv2.destroyAllWindows()
 
 # Output as mp4
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-out = cv2.VideoWriter('output.mp4', fourcc, 60, (640, 480))
+out = cv2.VideoWriter('output/output.mp4', fourcc, 60, (640, 480))
 
 for image in images:
     # correct color channels

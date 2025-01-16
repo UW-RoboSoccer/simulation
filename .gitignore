@@ -6,3 +6,9 @@
 **/.DS_Store
 .DS_Store
 rollout.pkl
+
+# Generated Files
+**.mp4
+**params
+
+/output

@@ -15,6 +15,9 @@ from mujoco import mjx
 from mujoco.mjx._src import support
 
 import os
+
+from envs.stand_reward import _calculate_reward
+
 CONTACT_HISTORY_WINDOW = 0.2
 
 
@@ -26,23 +29,27 @@ class HumanoidKick(PipelineEnv):
 
         self.mj_data = mujoco.MjData(mj_model)
         self.mjx_model = mjx.put_model(mj_model)
+        self.mjx_data = mjx.put_data(mj_model, self.mj_data)
 
         sys = mjcf.load_model(mj_model)
         self.sys = sys
 
         self.reset_noise_scale = 1e-2
 
-        super().__init__(self.sys, backend='mjx', **kwargs)
-
-        self.sensorData = { 'accel': [],
-                            'gyro' : []}
-
         self.links = self.sys.link_names
 
-        #IMU sensor data
-        self.sensorData['accel'].append(self.mj_data.sensor('accel').data.copy())
-        self.sensorData['gyro'].append(self.mj_data.sensor('gyro').data.copy())
+        self.accel_end_idx = 3
+        self.gyro_end_idx = 6
 
+        super().__init__(self.sys, backend='mjx', **kwargs)
+
+        #IMU Sensor and Contact Force
+        self.sensor_data = { 'accel': jp.array(3),
+                            'gyro' : jp.array(3),
+                            'left_contact' : jp.array(1),
+                            'right_contact' : jp.array(1)
+                            }
+        
         #contact forces
         self.floor_geom_id = support.name2id(mj_model, mujoco.mjtObj.mjOBJ_GEOM, 'floor')
         self.left_foot_geom_id = support.name2id(mj_model, mujoco.mjtObj.mjOBJ_GEOM, 'left_foot')
@@ -66,6 +73,13 @@ class HumanoidKick(PipelineEnv):
             rng2, (self.sys.qd_size(),), minval=low, maxval=hi
         )
 
+        #Reset IMU and Force Sensor Data
+        self.sensor_data = { 'accel': jp.zeros(3),
+                            'gyro' : jp.zeros(3),
+                            'left_contact' : jp.zeros(1),
+                            'right_contact' : jp.zeros(1)
+                            }
+
         # reset ball and target when implemented later
 
         #concatenate ball and target positions and velocites into this below
@@ -74,18 +88,19 @@ class HumanoidKick(PipelineEnv):
 
         pipeline_state = self.pipeline_init(qpos, qvel)
         obs = self._get_obs(pipeline_state, jp.zeros(self.sys.act_size()))
-        reward, done, zero = jp.zeros(3)
+        reward, done = jp.zeros(2)
 
         metrics = {
-            'stabilizeReward': 0,
-            'kickReward': 0,
-            'accelerometer': jp.zeros(self.sensorData['accel'][0].shape),
-            'gyroscope': jp.zeros(self.sensorData['gyro'][0].shape),
-            'left_contact': 0,
-            'right_contact': 0,
+            'total_reward': reward,
+            'is_standing': False,
+            'velocity_reward': 0,
+            'base_height_reward': 0,
+            'base_acceleration_reward': 0,
+            'feet_contact_reward': 0,
+            'action_diff_reward': 0,
         }
-        # print('end of reset function')
-        done = True
+
+        # done = True
         return State(pipeline_state, obs, reward, done, metrics)
 
     def step(self, state: State, action: jp.ndarray) -> State:
@@ -98,23 +113,39 @@ class HumanoidKick(PipelineEnv):
 
         obs = self._get_obs(pipeline_state, action)
 
+        is_standing = False
+        
+        is_standing = jp.where(
+            pipeline_state.q[2] > 0.5,
+            True,
+            False
+        )
 
-        done = False #for now
-        reward = 10
+        # jax.debug.print("is_standing: {}", is_standing)
 
-        left_contact, right_contact = self.get_gait_contact(pipeline_state)
+        done = jp.where(
+            is_standing,
+            False,
+            True
+        )
+
+        target_height = 0.5
+
+        reward, all_rewards = _calculate_reward(pipeline_state=pipeline_state, sensor_data=self.sensor_data, is_standing=is_standing, target_height=target_height)
+
+        # left_contact, right_contact = self.get_gait_contact(pipeline_state)
 
         metrics = {
-            'stabilizeReward': 0,
-            'kickReward': 0,
-            'accelerometer': self.sensorData['accel'][0],
-            'gyroscope': self.sensorData['gyro'][0],
-            'left_contact': left_contact,
-            'right_contact': right_contact,
+            'total_reward': reward,
+            'is_standing': is_standing,
+            'velocity_reward': all_rewards['velocity'],
+            'base_height_reward': all_rewards['base_height'],
+            'base_acceleration_reward': all_rewards['base_acceleration'],
+            'feet_contact_reward': all_rewards['feet_contact'],
+            'action_diff_reward': all_rewards['action_difference'],
         }
 
         state.metrics.update(metrics)
-        # print(state.metrics)
 
         return state.replace(pipeline_state=pipeline_state, obs=obs, reward=reward, done=done)
 
@@ -123,16 +154,21 @@ class HumanoidKick(PipelineEnv):
         position = pipeline_state.q
         velocity = pipeline_state.qd
 
-        #get sensor data
-        self.sensorData['accel'].append(self.mj_data.sensor('accel').data.copy())
-        self.sensorData['gyro'].append(self.mj_data.sensor('gyro').data.copy())
-        lin_accel = self.sensorData['accel'][0]  
-        ang_accel = self.sensorData['gyro'][0]
+        data = pipeline_state.sensordata
+        self.sensor_data['accel'] = data[0: self.accel_end_idx]
+        self.sensor_data['gyro'] = data[self.accel_end_idx: self.gyro_end_idx]
+
+        # jax.debug.print("accel data: {}", self.sensor_data['accel'])
+        # jax.debug.print("gyro data: {}", self.sensor_data['gyro'])
+
+        lin_accel = self.sensor_data['accel']
+        ang_vel = self.sensor_data['gyro']
 
         #get contact force data
         right_contact_force, left_contact_force = self.get_gait_contact(pipeline_state)
-        
-        #jax.debug.print("right force: {}, left force: {}", right_contact_force, left_contact_force)
+        self.sensor_data['left_contact']= right_contact_force
+        self.sensor_data['right_contact'] = left_contact_force        
+        # jax.debug.print("right force: {}, left force: {}", self.sensor_data['left_contact'], self.sensor_data['right_contact'])
 
         # contact_forces = jp.concatenate([right_contact_force, left_contact_force])
         #add actuator values to observation space
@@ -144,7 +180,7 @@ class HumanoidKick(PipelineEnv):
             position, 
             velocity,
             lin_accel,
-            ang_accel,
+            ang_vel,
             jp.expand_dims(right_contact_force, axis=0), # expanded for concatenation 
             jp.expand_dims(left_contact_force, axis=0),
             # Add actuators, ball, and target
@@ -166,7 +202,7 @@ class HumanoidKick(PipelineEnv):
         total_right_forces = jp.sum(forces * right_contact_mask[:, None], axis=0)
         total_left_forces = jp.sum(forces * left_contact_mask[:, None], axis=0)
 
-        jax.debug.print("right force: {}, left force: {}", total_right_forces, total_left_forces)
+        # jax.debug.print("right force: {}, left force: {}", total_right_forces, total_left_forces)
 
         # returns the y component of the contact forces
         return math.normalize(total_right_forces[:3])[1], math.normalize(total_left_forces[:3])[1]
