@@ -3,28 +3,6 @@
 
   <asset>
     <material name="black" rgba="0.2 0.2 0.2 1"/>
-
-    <!-- <mesh file="body.stl"/>
-    <mesh file="ll1.stl"/>
-    <mesh file="ll2.stl"/>
-    <mesh file="ll3.stl"/>
-    <mesh file="ll4.stl"/>
-    <mesh file="ll5.stl"/>
-    <mesh file="ll6.stl"/>
-    <mesh file="rl1.stl"/>
-    <mesh file="rl2.stl"/>
-    <mesh file="rl3.stl"/>
-    <mesh file="rl4.stl"/>
-    <mesh file="rl5.stl"/>
-    <mesh file="rl6.stl"/>
-    <mesh file="la1.stl"/>
-    <mesh file="la2.stl"/>
-    <mesh file="la3.stl"/>
-    <mesh file="ra1.stl"/>
-    <mesh file="ra2.stl"/>
-    <mesh file="ra3.stl"/>
-    <mesh file="h1.stl"/>
-    <mesh file="h2.stl"/> -->
     <mesh name="bodyc" file="simplified_convex_decimated/body.stl"/>
     <mesh name="body1c" file="simplified_convex_decimated/body_sub1.stl"/>
     <mesh name="body2c" file="simplified_convex_decimated/body_sub2.stl"/>
