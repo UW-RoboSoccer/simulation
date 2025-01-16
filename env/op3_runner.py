@@ -19,7 +19,8 @@ from brax.base import Base, Motion, Transform
 from brax.envs.base import Env, PipelineEnv, State
 from brax.training.agents.ppo import train as ppo
 from brax.training.agents.ppo import networks as ppo_networks
-from brax.io import html, mjcf, model
+from brax.io import html, mjcf, modesl
+from mujoco.mjx._src import support
 
 OP3_SCENE_PATH = Path('.') / "assets" / "op3" / "scene.xml"
 HUMANOID_SCENE_PATH = Path('.') / "assets" / "humanoid" / "humanoid_pos.xml"
@@ -32,34 +33,46 @@ class OP3Runner(PipelineEnv):
             self,
             **kwargs
     ):
-        path = kwargs.pop('path', OP3_SCENE_PATH)
+        path = kwargs.pop('path', HUMANOID_SCENE_PATH)
         mj_model = mujoco.MjModel.from_xml_path(str(path))
 
-        self.sensor_data = {}
         self.mj_data = mujoco.MjData(mj_model)
 
         sys = mjcf.load_model(mj_model)
         self.sys = sys
 
-        self.sensor_data = {'accel':[],
-                            'gyro':[]}
-        self.lfootid = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_GEOM, 'leftFoot')
-        self.rfootid = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_GEOM, 'rightFoot')
+        self.reset_noise_scale = 1e-2
 
-        print(self.lfootidm, self.rfootid)
+        self.links = self.sys.link_names
 
-        print(len(self.sys.init_q))
-        print(self.sys.init_q)
-   
-        
+        self.accel_end_idx = 3
+        self.gyro_end_idx = 6
+
+        #IMU Sensor and Contact Force
+        self.sensor_data = { 'accel': jp.array(3),
+                            'gyro' : jp.array(3),
+                            'left_contact' : jp.array(1),
+                            'right_contact' : jp.array(1)
+                            }
+
+        # geom IDs for contact forces
+        self.floor_geom_id = support.name2id(mj_model, mujoco.mjtObj.mjOBJ_GEOM, 'floor')
+        self.left_foot_geom_id = support.name2id(mj_model, mujoco.mjtObj.mjOBJ_GEOM, 'left_foot')
+        self.right_foot_geom_id = support.name2id(mj_model, mujoco.mjtObj.mjOBJ_GEOM, 'right_foot')
+
         super().__init__(sys, backend='mjx', **kwargs)
+
 
     def reset(self, rng: jp.ndarray) -> base.State:
         """Resets the environment to an initial state."""
 
         rng, rng1, rng2 = jax.random.split(rng, 3)
 
-        qpos = self.sys.init_q + jax.random.uniform(rng1, self.sys.q_size(), minval=-1, maxval=1, dtype=jp.float32)
+        low, hi = -self.reset_noise_scale, self.reset_noise_scale
+
+        humanoid_qpos = self.sys.init_q + jax.random.uniform(rng1, self.sys.q_size(), minval=low, maxval=hi, dtype=jp.float32)
+        humanoid_qvel = jax.random.uniform(rng2, self.sys.qd_size(), minval=low, maxval=hi, dtype=jp.float32)
+
         qvel = jax.random.uniform(rng2, self.sys.qd_size(), minval=-1, maxval=1, dtype=jp.float32)
 
         # Reset actuator activation states
@@ -86,7 +99,18 @@ class OP3Runner(PipelineEnv):
         pipeline_state0 = state.pipeline_state
         pipeline_state = self.pipeline_step(pipeline_state0, action) # returns base.State with args: q, qd, x, xd
 
-        return
+        obs = self._get_obs(pipeline_state, action)
+
+        done = False
+        reward = 0
+
+        metrics = {
+
+        }
+
+        state.metrics.update(metrics)
+
+        return state.replace(pipeline_state=pipeline_state, obs=obs, reward=reward, done=done)
     
 
     def _get_obs(self, pipeline_state: base.State, action: jp.ndarray) -> jp.ndarray:
@@ -118,6 +142,8 @@ class OP3Runner(PipelineEnv):
             self.sys, action, pipeline_state.q, pipeline_state.qd
         )
 
+
+
         return jp.concatenate([
             position,
             velocity,
@@ -141,22 +167,41 @@ class OP3Runner(PipelineEnv):
         return com, inertia, mass_sum, x_i
     
 
+
+    def get_gait_contact(self, pipeline_state: base.State):
+        forces = jp.array([support.contact_forces(self.mjx_model, self.mj_data ,i) for i in range(self.mj_data.ncon)])
+
+        right_contacts = pipeline_state.contact.geom == jp.array([self.floor_geom_id, self.right_foot_geom_id])
+        left_contacts = pipeline_state.contact.geom == jp.array([self.floor_geom_id, self.left_foot_geom_id])
+
+        right_contact_mask = jp.sum(right_contacts, axis=1) == 2
+        left_contact_mask = jp.sum(left_contacts, axis=1) == 2
+
+        total_right_forces = jp.sum(forces * right_contact_mask[:, None], axis=0)
+        total_left_forces = jp.sum(forces * left_contact_mask[:, None], axis=0)
+
+        return math.normalize(total_right_forces[:3])[1], math.normalize(total_left_forces[:3])[1]
+        # Use mak
+
+
+
     def _get_contact_forces(self, piipline_state: base.State) -> jp.ndarray:
         """Returns the contact forces."""
 
     
     # def height_reward(self, )
 
+envs.register_environment('op3_runner', OP3Runner)
 
 if __name__ == '__main__':
     rng = jax.random.PRNGKey(0)
 
     env = OP3Runner()
-    state = env.reset(rng)
-    print("Initial state:")
-    print("Reward: ", state.reward)
-    print("Observation: ", state.obs)
-    print("Done: ", state.done)
-    print("Metrics: ", state.metrics)
+    # state = env.reset(rng)
+    # print("Initial state:")
+    # print("Reward: ", state.reward)
+    # print("Observation: ", state.obs)
+    # print("Done: ", state.done)
+    # print("Metrics: ", state.metrics)
 
 

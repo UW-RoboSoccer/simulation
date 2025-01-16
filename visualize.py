@@ -10,9 +10,12 @@ from brax import envs
 from brax.training.agents.ppo import networks as ppo_networks
 from brax.io import model, html
 
+from env.op3_runner import OP3Runner
+
 from IPython.core.display import HTML
 
-env_name = 'humanoid'
+# env_name = 'humanoid'
+env_name = 'op3_runner'
 env = envs.get_environment(env_name)
 
 def gen_rollout(env, model_path=None, n_steps=500):

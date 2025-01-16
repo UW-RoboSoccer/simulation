@@ -38,6 +38,7 @@
         <geom conaffinity="1" condim="3" friction="1 .1 .1" material="MatPlane" name="floor" pos="0 0 0" size="20 20 0.125" type="plane" rgba="0.5 0.5 0.5 1.0"/>
         <!-- <geom condim="3" material="MatPlane" name="floor" pos="0 0 0" size="10 10 0.125" type="plane"/>-->
         <body name="torso" pos="0 0 1.4">
+            <site name="IMU"/>
             <camera name="track" mode="trackcom" pos="0 -4 0" xyaxes="1 0 0 0 0 1"/>
             <joint armature="0" damping="0" limited="false" name="root" pos="0 0 0" stiffness="0" type="free"/>
             <geom contype="1" fromto="0 -.07 0 0 .07 0" name="torso1" size="0.07" type="capsule"/>
@@ -121,4 +122,10 @@
         <position joint="left_shoulder2" name="left_shoulder2"/>
         <position joint="left_elbow" name="left_elbow"/>
     </actuator>
+
+    <sensor>
+        <accelerometer name="accel" site="IMU"/>
+        <gyro name="gyro" site="IMU"/>
+    </sensor>
+
 </mujoco>
