@@ -1,9 +1,7 @@
 import jax
 from jax import numpy as jp
 
-import mujoco
 import mujoco.viewer
-from mujoco import mjx
 
 import pickle
 
@@ -58,7 +56,7 @@ def gen_rollout(env, model_path=None, n_steps=500):
 
     return rollout, stats, info
 
-rollout, stats, info = gen_rollout(env, model_path='output/params', n_steps=2000)
+rollout, stats, info = gen_rollout(env, model_path='output/params', n_steps=1000)
 
 # Plot reward metrics
 import matplotlib.pyplot as plt
