@@ -6,6 +6,7 @@
 **/.DS_Store
 .DS_Store
 rollout.pkl
+/soccer_venv
 
 # Generated Files
 **.mp4
