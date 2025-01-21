@@ -5,6 +5,7 @@ from brax.io import model
 from datetime import datetime
 
 from envs.base_op3 import OP3Stand
+from envs.target_pose_env import MocapStandUp
 
 import functools
 
@@ -12,14 +13,14 @@ import jax
 
 from matplotlib import pyplot as plt
 
-envs.register_environment('humanoid-standup', OP3Stand)
-env = envs.get_environment('humanoid-standup', xml_path='assets/humanoid/humanoid_pos.xml')
+envs.register_environment('humanoid-standup', MocapStandUp)
+env = envs.get_environment('humanoid-standup', xml_path='assets/humanoid/humanoid_pos.xml', pose_path='poses.xml')
 
 jit_reset = jax.jit(env.reset)
 jit_step = jax.jit(env.step)
 
 train_fn = functools.partial(
-    ppo.train, num_timesteps=30_000_000, num_evals=5, reward_scaling=0.1,
+    ppo.train, num_timesteps=60_000_000, num_evals=5, reward_scaling=0.1,
     episode_length=2000, normalize_observations=True, action_repeat=1,
     unroll_length=10, num_minibatches=24, num_updates_per_batch=8,
     discounting=0.97, learning_rate=3e-4, entropy_cost=1e-3, num_envs=3072,
