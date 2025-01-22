@@ -37,7 +37,7 @@
         <light cutoff="100" diffuse="1 1 1" dir="-0 0 -1.3" directional="true" exponent="1" pos="0 0 1.3" specular=".1 .1 .1"/>
         <geom conaffinity="1" condim="3" friction="1 .1 .1" material="MatPlane" name="floor" pos="0 0 0" size="20 20 0.125" type="plane" rgba="0.5 0.5 0.5 1.0"/>
         <!-- <geom condim="3" material="MatPlane" name="floor" pos="0 0 0" size="10 10 0.125" type="plane"/>-->
-        <body name="torso" pos="0 0 1.4">
+        <body name="torso" pos="0 0 1.3">
             <site name="IMU"/>
             <camera name="track" mode="trackcom" pos="0 -4 0" xyaxes="1 0 0 0 0 1"/>
             <joint armature="0" damping="0" limited="false" name="root" pos="0 0 0" stiffness="0" type="free"/>
@@ -126,6 +126,7 @@
     <sensor>
         <accelerometer name="accel" site="IMU"/>
         <gyro name="gyro" site="IMU"/>
+        <velocimeter name="velocity" site="IMU"/>
     </sensor>
 
 </mujoco>

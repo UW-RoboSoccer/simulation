@@ -16,9 +16,15 @@ import cv2
 from envs.kicking import HumanoidKick
 import os
 
-xml_path='assets/humanoid/modified_humanoid.xml'
 env_name = 'kicker'
-env = envs.get_environment(env_name)
+# backend = 'positional'
+envs.register_environment(env_name, HumanoidKick)
+env = envs.get_environment(env_name=env_name) #, xml_path='assets/humanoid/modified_humanoid.xml')
+
+xml_path='assets/humanoid/humanoid_pos.xml'
+model_path = 'output/params'
+# model_path = None
+# env = envs.get_environment(env_name)
 
 def gen_rollout(env, model_path=None, n_steps=250):
     jit_inference_fn = None
@@ -57,7 +63,7 @@ def gen_rollout(env, model_path=None, n_steps=250):
 
     return rollout, stats, info
 
-rollout, stats, info = gen_rollout(env, n_steps=500)
+rollout, stats, info = gen_rollout(env, n_steps=1000, model_path=model_path)
 
 import matplotlib.pyplot as plt
 
@@ -67,6 +73,7 @@ base_height_reward = [stat['base_height_reward'] for stat in stats]
 base_acceleration_reward = [stat['base_acceleration_reward'] for stat in stats]
 feet_contact_reward = [stat['feet_contact_reward'] for stat in stats]
 action_difference_reward = [stat['action_diff_reward'] for stat in stats]
+uprightness_reward = [stat['upright_reward'] for stat in stats]
 
 #Plot Stabilization Metrics
 plt.figure(figsize=(12, 8))
@@ -76,6 +83,7 @@ plt.plot(base_height_reward, label='Base Height Reward')
 plt.plot(base_acceleration_reward, label='Base Acceleration Reward')
 plt.plot(feet_contact_reward, label='Feet Contact Reward')
 plt.plot(action_difference_reward, label='Action Difference Reward')
+plt.plot(uprightness_reward, label='Upright Reward')
 plt.xlabel('Time Step')
 plt.ylabel('Reward')
 plt.title('Reward Metrics Over Time')
