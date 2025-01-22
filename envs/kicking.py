@@ -24,7 +24,7 @@ CONTACT_HISTORY_WINDOW = 0.2
 class HumanoidKick(PipelineEnv):
     def __init__(self, **kwargs):
         
-        path = os.path.join(os.path.dirname(__file__), "..", "assets", "humanoid", "modified_humanoid.xml")
+        path = os.path.join(os.path.dirname(__file__), "..", "assets", "humanoid", "ernest_humanoid.xml")
         mj_model = mujoco.MjModel.from_xml_path(str(path))
 
         self.mj_data = mujoco.MjData(mj_model)
@@ -100,6 +100,11 @@ class HumanoidKick(PipelineEnv):
             'action_diff_reward': 0,
         }
 
+        state_inf = { 
+            'prev_action': jp.zeros(self.sys.act_size())   
+        }
+
+
         # done = True
         return State(pipeline_state, obs, reward, done, metrics)
 
@@ -107,6 +112,7 @@ class HumanoidKick(PipelineEnv):
         
         action_min = self.sys.actuator.ctrl_range[:, 0]
         action_max = self.sys.actuator.ctrl_range[:, 1]
+        jax.debug.print("action {}",action)
         action = (action + 1) * (action_max - action_min) * 0.5 + action_min
 
         pipeline_state = self.pipeline_step(state.pipeline_state, action)
@@ -145,9 +151,16 @@ class HumanoidKick(PipelineEnv):
             'action_diff_reward': all_rewards['action_difference'],
         }
 
+        state_info = { 
+            'prev_action': action
+        }
+
         state.metrics.update(metrics)
 
-        return state.replace(pipeline_state=pipeline_state, obs=obs, reward=reward, done=done)
+        #add random velocity pertubations 
+        self.add_random_perturbations(pipeline_state)
+
+        return state.replace(pipeline_state=pipeline_state, obs=obs, reward=reward, done=done, info=state_info)
 
     def _get_obs(self, pipeline_state: base.State, action: jax.Array) -> jax.Array:
         
@@ -236,14 +249,20 @@ class HumanoidKick(PipelineEnv):
             math.normalize(total_left_ball_forces[:3])[1],
             math.normalize(total_ball_target_forces[:3])[1]
         )
-
+    
+    def add_random_perturbations(self, pipeline_state: base.State):
+        rng = jax.random.PRNGKey(0)
+        random_force = jax.random.uniform(rng, shape=(3,), minval=-10.0, maxval=10.0)
+        pipeline_state = pipeline_state.replace(
+            xfrc_applied=pipeline_state.xfrc_applied.at[..., :3].add(random_force)
+        )
 
 envs.register_environment('kicker', HumanoidKick)
 
-# env = HumanoidKick()
-# rng = jax.random.PRNGKey(0)
+env = HumanoidKick()
+rng = jax.random.PRNGKey(0)
 
-# state = env.reset(rng)
-# obs = env._get_obs(state.pipeline_state, jp.zeros(env.sys.act_size()))
+state = env.reset(rng)
+obs = env._get_obs(state.pipeline_state, jp.zeros(env.sys.act_size()))
 
-# print("Initial State:")
+print("Initial State:")
