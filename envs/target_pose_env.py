@@ -1,3 +1,4 @@
+from sre_constants import error
 import jax
 import jax.numpy as jp
 
@@ -68,25 +69,26 @@ class MocapStandUp(PipelineEnv):
         pipeline_state = self.pipeline_step(state.pipeline_state, action)
 
         # Track the number of steps until the next target pose switch
-        target_time = state.info['target_time']
-        target_time -= 1
+        # target_time = state.info['target_time']
+        # target_time -= 1
 
-        # Track pose
-        target_time = jp.where(target_time <= 0, jax.random.exponential(state.info['mocap_rng'], shape=(1,))/self._lambda, target_time)
-        target_pos_idx = jp.where(target_time <= 0, jax.random.randint(state.info['mocap_rng'], minval=0, maxval=len(self.target_q_poses), shape=(1,), dtype=jp.int32), state.info['target_pos_idx'])
+        # Sample new time and pos if pos switch condition met, otherwise stay
+        # target_time = jp.where(target_time <= 0, jax.random.exponential(state.info['mocap_rng'], shape=(1,))*self._lambda, target_time)
+        # target_pos_idx = jp.where(target_time <= 0, jax.random.randint(state.info['mocap_rng'], minval=0, maxval=len(self.target_q_poses), shape=(1,), dtype=jp.int32), state.info['target_pos_idx'])
 
-        target_q_pos = self.target_q_poses[target_pos_idx]
+        target_q_pos = self.target_q_poses[0]
 
         # Calculate rewards
-        joint_pos_reward = self.joint_pos_reward(pipeline_state.q, target_q_pos[0])
-        orientation_reward = self.orientation_reward(pipeline_state.q, target_q_pos[0])
+        joint_pos_reward = self.joint_pos_reward(pipeline_state.q, target_q_pos)
+        orientation_reward = self.orientation_reward(pipeline_state.q, target_q_pos)
 
         reward = -joint_pos_reward*orientation_reward
 
         obs = self._get_obs(pipeline_state, action)
 
+        # Update metrics with rewards and state info with new target time and target pos
         state.metrics.update(joint_pos_reward=joint_pos_reward, orientation_reward=orientation_reward)
-        state.info.update(target_time=target_time, target_pos_idx=target_pos_idx)
+        # state.info.update(target_time=target_time, target_pos_idx=target_pos_idx)
 
         return state.replace(pipeline_state=pipeline_state, obs=obs, reward=reward)
 
@@ -160,15 +162,16 @@ class MocapStandUp(PipelineEnv):
         target_q_pos = target_q_pos[7:]
 
         error = (jp.pi - jp.abs(target_q_pos - joint_pos)) / jp.pi
-        return jp.linalg.vector_norm(error)
+        return jp.mean(error)
 
     def orientation_reward(self, joint_pos: jax.Array, target_q_pos: jax.Array):
-        joint_pos = joint_pos[3:7]
-        target_q_pos = target_q_pos[3:7]
+        body_pos = joint_pos[3:7]
+        target_body_pos = target_q_pos[3:7]
         up = jp.array([0, 0, 1], jp.float32)
 
-        body_orientation = math.rotate(up, joint_pos)
-        target_orientation = math.rotate(up, target_q_pos)
+        body_orientation = math.rotate(up, body_pos)
+        target_orientation = math.rotate(up, target_body_pos)
 
-        error = (jp.pi - jp.arccos(jp.linalg.vecdot(body_orientation, target_orientation))) / jp.pi
+        # error = (jp.pi - jp.arccos(jp.dot(body_orientation, target_orientation))) / jp.pi
+        error = (jp.pi - jp.arccos(jp.clip(jp.dot(body_orientation, target_orientation), -1, 1))) / jp.pi
         return error

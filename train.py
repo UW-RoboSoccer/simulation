@@ -20,10 +20,10 @@ jit_reset = jax.jit(env.reset)
 jit_step = jax.jit(env.step)
 
 train_fn = functools.partial(
-    ppo.train, num_timesteps=60_000_000, num_evals=5, reward_scaling=0.1,
+    ppo.train, num_timesteps=100_000_000, num_evals=5, reward_scaling=0.1,
     episode_length=2000, normalize_observations=True, action_repeat=1,
     unroll_length=10, num_minibatches=24, num_updates_per_batch=8,
-    discounting=0.97, learning_rate=3e-4, entropy_cost=1e-3, num_envs=3072,
+    discounting=0.97, learning_rate=3e-4, entropy_cost=1e-2, num_envs=3072,
     batch_size=512, seed=0
 )
 
