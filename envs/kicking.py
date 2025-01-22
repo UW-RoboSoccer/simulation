@@ -5,6 +5,7 @@ from brax.io import mjcf
 from brax import base
 from brax.base import Transform
 from brax import math
+import time 
 
 import brax.math
 import jax
@@ -38,6 +39,8 @@ class HumanoidKick(PipelineEnv):
 
         self.links = self.sys.link_names
 
+        self.seed = jax.random.PRNGKey(0) # for random perturbations (increment by 1 per step after this)
+
         self.accel_end_idx = 3
         self.gyro_end_idx = 6
 
@@ -64,7 +67,6 @@ class HumanoidKick(PipelineEnv):
         rng, rng1, rng2 = jax.random.split(rng, 3)
 
         low, hi = -self.reset_noise_scale, self.reset_noise_scale
-
         humanoid_qpos = self.sys.init_q + jax.random.uniform(
             rng1, (self.sys.q_size(),), jp.float32, minval=low, maxval=hi
         )
@@ -100,19 +102,19 @@ class HumanoidKick(PipelineEnv):
             'action_diff_reward': 0,
         }
 
-        state_inf = { 
-            'prev_action': jp.zeros(self.sys.act_size())   
+        info = { 
+            'prev_action': jp.zeros(self.sys.act_size()), 
+            'random_seed': self.seed 
         }
 
 
         # done = True
-        return State(pipeline_state, obs, reward, done, metrics)
+        return State(pipeline_state, obs, reward, done, metrics, info)
 
     def step(self, state: State, action: jp.ndarray) -> State:
         
         action_min = self.sys.actuator.ctrl_range[:, 0]
         action_max = self.sys.actuator.ctrl_range[:, 1]
-        jax.debug.print("action {}",action)
         action = (action + 1) * (action_max - action_min) * 0.5 + action_min
 
         pipeline_state = self.pipeline_step(state.pipeline_state, action)
@@ -151,16 +153,27 @@ class HumanoidKick(PipelineEnv):
             'action_diff_reward': all_rewards['action_difference'],
         }
 
-        state_info = { 
-            'prev_action': action
+
+        # Add random perturbations to the state
+        rng = state.info.get('random_seed', self.seed)
+        jax.debug.print("random_seed (before split): {}", rng)
+
+        # Split the RNG key to generate independent random values
+        rng, next_rng = jax.random.split(rng)
+
+        # Add random perturbations to the state
+        self.add_random_perturbations(pipeline_state, rng)
+        jax.debug.print("random_seed (after split): {}", rng)
+
+        # Update the state info with the new random seed
+        state_info = {
+            'prev_action': action,
+            'random_seed': next_rng
         }
+        state.info.update(state_info)
 
-        state.metrics.update(metrics)
 
-        #add random velocity pertubations 
-        self.add_random_perturbations(pipeline_state)
-
-        return state.replace(pipeline_state=pipeline_state, obs=obs, reward=reward, done=done, info=state_info)
+        return state.replace(pipeline_state=pipeline_state, obs=obs, reward=reward, done=done)
 
     def _get_obs(self, pipeline_state: base.State, action: jax.Array) -> jax.Array:
         
@@ -168,6 +181,8 @@ class HumanoidKick(PipelineEnv):
         velocity = pipeline_state.qd
 
         data = pipeline_state.sensordata
+
+        # jax.debug.print("sensor data: {}", data)   
         self.sensor_data['accel'] = data[0: self.accel_end_idx]
         self.sensor_data['gyro'] = data[self.accel_end_idx: self.gyro_end_idx]
 
@@ -250,13 +265,30 @@ class HumanoidKick(PipelineEnv):
             math.normalize(total_ball_target_forces[:3])[1]
         )
     
-    def add_random_perturbations(self, pipeline_state: base.State):
-        rng = jax.random.PRNGKey(0)
-        random_force = jax.random.uniform(rng, shape=(3,), minval=-10.0, maxval=10.0)
-        pipeline_state = pipeline_state.replace(
-            xfrc_applied=pipeline_state.xfrc_applied.at[..., :3].add(random_force)
+    def add_random_perturbations(self, pipeline_state: base.State, rng, frequency=0.2):
+        # Split the RNG key to generate independent random values
+        rng, rng_force, rng_apply = jax.random.split(rng, 3)
+
+        # Generate a random force
+        random_force = jax.random.uniform(rng_force, shape=(3,), minval=-10.0, maxval=10.0)
+
+        # Determine whether to apply the force based on frequency
+        apply_force = jax.random.uniform(rng_apply) <= frequency
+
+        # Apply force conditionally
+        xfrc_applied = jp.where(
+            apply_force,
+            pipeline_state.xfrc_applied.at[..., :3].add(random_force),  # Add random force
+            pipeline_state.xfrc_applied.at[..., :3].add(jp.zeros(3))    # No force
         )
 
+        # Replace the updated xfrc_applied in the pipeline state
+        pipeline_state = pipeline_state.replace(xfrc_applied=xfrc_applied)
+
+        # Debugging: Print the applied force and RNG keys
+        jax.debug.print("xfrc_applied: {}, apply_force: {}, random_force: {}", 
+                        pipeline_state.xfrc_applied[0][:3], apply_force, random_force)
+             
 envs.register_environment('kicker', HumanoidKick)
 
 env = HumanoidKick()
