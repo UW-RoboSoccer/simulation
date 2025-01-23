@@ -12,12 +12,12 @@ from brax.io import model
 
 import cv2
 
-from envs.base_op3 import OP3Stand
+from envs.target_pose_env import MocapStandUp
 
-envs.register_environment('op3-stand', OP3Stand)
+envs.register_environment('op3-stand', MocapStandUp)
 
 env_name = 'op3-stand'
-env = envs.get_environment(env_name, xml_path='assets/humanoid/humanoid_pos.xml')
+env = envs.get_environment(env_name, xml_path='assets/humanoid/humanoid_pos.xml', pose_path='poses.xml')
 # env = envs.get_environment('humanoid')
 
 def gen_rollout(env, model_path=None, n_steps=500):
@@ -35,7 +35,7 @@ def gen_rollout(env, model_path=None, n_steps=500):
     jit_step = jax.jit(env.step)
     print('JIT finished')
 
-    rng = jax.random.PRNGKey(0)
+    rng = jax.random.PRNGKey(1)
 
     state = jit_reset(rng)
     rollout = [state.pipeline_state]
@@ -61,23 +61,23 @@ rollout, stats, info = gen_rollout(env, model_path='output/params', n_steps=1000
 # Plot reward metrics
 import matplotlib.pyplot as plt
 
-# Extract metrics
-reward_base_orient = [stat['reward_base_orient'] for stat in stats]
-reward_height = [stat['reward_height'] for stat in stats]
-quad_ctrl_cost = [stat['reward_ctrl'] for stat in stats]
-reward_up_vel = [stat['reward_up_vel'] for stat in stats]
+# # Extract metrics
+# reward_base_orient = [stat['reward_base_orient'] for stat in stats]
+# reward_height = [stat['reward_height'] for stat in stats]
+# quad_ctrl_cost = [stat['reward_ctrl'] for stat in stats]
+# reward_up_vel = [stat['reward_up_vel'] for stat in stats]
 
-# Plot metrics
-plt.figure(figsize=(12, 8))
-plt.plot(reward_base_orient, label='Reward Base Orient')
-plt.plot(reward_height, label='Reward Height')
-plt.plot(quad_ctrl_cost, label='Quad Ctrl Cost')
-plt.plot(reward_up_vel, label='Reward Up Vel')
-plt.xlabel('Time Step')
-plt.ylabel('Reward')
-plt.title('Reward Metrics Over Time')
-plt.legend()
-plt.show()
+# # Plot metrics
+# plt.figure(figsize=(12, 8))
+# plt.plot(reward_base_orient, label='Reward Base Orient')
+# plt.plot(reward_height, label='Reward Height')
+# plt.plot(quad_ctrl_cost, label='Quad Ctrl Cost')
+# plt.plot(reward_up_vel, label='Reward Up Vel')
+# plt.xlabel('Time Step')
+# plt.ylabel('Reward')
+# plt.title('Reward Metrics Over Time')
+# plt.legend()
+# plt.show()
 
 # Save rollout to pkl file
 with open('output/rollout.pkl', 'wb') as f:
@@ -94,8 +94,8 @@ running = True
 while running:
     for i, image in enumerate(images):
         # write out info to text on image
-        image = cv2.putText(image, f'Height: {info[i]["base_height"]:.2f}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1, cv2.LINE_AA)
-        image = cv2.putText(image, f'Orientation: {info[i]["base_orientation"]}', (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1, cv2.LINE_AA)
+        # image = cv2.putText(image, f'Height: {info[i]["base_height"]:.2f}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1, cv2.LINE_AA)
+        # image = cv2.putText(image, f'Orientation: {info[i]["base_orientation"]}', (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1, cv2.LINE_AA)
 
         # correct color channels
         image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)

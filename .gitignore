@@ -9,4 +9,5 @@ rollout.pkl
 /soccer_venv
 
 # Generated Files
-**.mp4
+output/
+# or alternatively: /output/
