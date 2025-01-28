@@ -5,6 +5,7 @@ import mujoco
 import mujoco.viewer
 from mujoco import mjx
 
+import os
 import pickle
 
 from brax import envs
@@ -80,6 +81,9 @@ plt.ylabel('Reward')
 plt.title('Reward Metrics Over Time')
 plt.legend()
 plt.show()
+
+# Ensure output directory exists
+os.makedirs('output', exist_ok=True)
 
 # Save rollout to pkl file
 with open('output/rollout.pkl', 'wb') as f:
