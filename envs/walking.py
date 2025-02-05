@@ -18,34 +18,14 @@ from mujoco.mjx._src import support
 
 import os
 
-from envs.walking_rewards import _base_height_reward, _velocity_reward, _rotating_reward, _upright_reward, _control_actions_reward
-
-WEIGHTS = {
-    'velocity': 2,
-    'base_height': 5,
-    'control_cost': -3, # penalize control actions
-    'rotation_cost': 0, # right now rotatation rewards aren't being given 
-    'upright_reward': 5
-}
-
-
-sensor_end_idx = {
-    'position' : 3,
-    'gyro' : 6,
-    'local_linvel' : 9,
-    'accelerometer' : 12,
-    'upvector': 15,
-    'forwardvector' : 18,
-    'left_foot_force' : 21,
-    'right_foot_force' : 24
-}
-
+import envs.walking_consts as consts 
+import envs.walking_rewards as rewards
 
 
 class HumanoidWalker(PipelineEnv):
     def __init__(self, **kwargs):
 
-        path = os.path.join(os.path.dirname(__file__), "..", "assets", "humanoid", "ernest_humanoid_mod.xml")
+        path = os.path.join(os.path.dirname(__file__), "..", "assets", "humanoid", "ernest_humanoid.xml")
         mj_model = mujoco.MjModel.from_xml_path(str(path))
 
         self.mj_data = mujoco.MjData(mj_model)
@@ -55,15 +35,13 @@ class HumanoidWalker(PipelineEnv):
 
         self.reset_noise_scale = 1e-2
 
+        self._controlled_joints = consts.NUM_CONTROL_JOINTS
+
+        jax.debug.print("qspace {}", self.sys.init_q)
+
         self.seed = jax.random.PRNGKey(0)
 
         super().__init__(self.sys, backend='mjx', **kwargs)
-
-        # indeces of data
-        self.accel_end_idx = 3
-        self.gyro_end_idx = 6
-        self.lin_accel_end_idx = 9
-
 
         self.target_height = 0.45
         self.roll_weight = 1.0
@@ -71,25 +49,13 @@ class HumanoidWalker(PipelineEnv):
         self.yaw_weight = 0.6
 
         #IMU Sensor and Contact Force
-        self.num_sensors = sensor_end_idx['right_foot_force'] - 1
+        self.num_sensors = consts.SENSOR_END_IDX['right_foot_force'] - 1
         self.sensor_data = jp.zeros(self.num_sensors)
-
-
-        #Define size of arrays returned with sensor data
-        self.sensor_sizes = {
-            'position' : 3,
-            'gyro' : 3,
-            'local_linvel' : 3,
-            'accelerometer' : 3,
-            'upvector': 3,
-            'forwardvector' : 3,
-            'left_foot_force' : 3,
-            'right_foot_force' : 3
-        }
-
+        
 
 
     def reset(self, rng: jp.ndarray) -> State:
+
         rng, rng1, rng2 = jax.random.split(rng, 3)
 
         low, hi = -self.reset_noise_scale, self.reset_noise_scale
@@ -101,7 +67,6 @@ class HumanoidWalker(PipelineEnv):
         humanoid_qvel = jax.random.uniform(
             rng2, (self.sys.qd_size(),), minval=low, maxval=hi
         )
-
         act = jp.zeros(self.sys.act_size(), jp.float32)
 
         #concatenate ball and goal positions and velocites into this below
@@ -111,8 +76,6 @@ class HumanoidWalker(PipelineEnv):
         pipeline_state = self.pipeline_init(qpos, qvel, act)
 
         obs = self._get_obs(pipeline_state, act)
-
-
 
         reward, done, zero = jp.zeros(3)
 
@@ -132,9 +95,13 @@ class HumanoidWalker(PipelineEnv):
         #normalize actions
         action_min = self.sys.actuator.ctrl_range[:, 0]
         action_max = self.sys.actuator.ctrl_range[:, 1]
-        action = (action + 1) * (action_max - action_min) * 0.5 + action_min
 
+        full_action = jp.zeros(self.sys.act_size())
 
+        for i, (_, actuator_idx) in enumerate(consts.CONTROLLED_ACTUATORS.items()):
+            full_action = full_action.at[actuator_idx].set(action[i])
+
+        full_action = (full_action + 1) * (action_max - action_min) * 0.5 + action_min
 
         prev_q = state.pipeline_state.q
         #get pipeline state
@@ -172,15 +139,15 @@ class HumanoidWalker(PipelineEnv):
         "Calculate Rewards"
 
         all_rewards = {
-            'velocity' : _velocity_reward(pipeline_state),
-            'base_height' : _base_height_reward(sensor_data, target_height),
-            'control_cost': _control_actions_reward(pipeline_state, prev_q),
-            'rotation_cost': _rotating_reward(sensor_data, self.roll_weight, self.pitch_weight, self.yaw_weight),
-            'upright_reward': _upright_reward(sensor_data)
+            'velocity' : rewards._velocity_reward(pipeline_state),
+            'base_height' : rewards._base_height_reward(sensor_data, target_height),
+            'control_cost': rewards._control_actions_reward(pipeline_state, prev_q),
+            'rotation_cost': rewards._rotating_reward(sensor_data, self.roll_weight, self.pitch_weight, self.yaw_weight),
+            'upright_reward': rewards._upright_reward(sensor_data)
         }
             # Calculate weighted sum of rewards
 
-        REWARD_WEIGHT = jp.array([WEIGHTS[key] for key in all_rewards.keys()])
+        REWARD_WEIGHT = jp.array([consts.WEIGHTS[key] for key in all_rewards.keys()])
         reward_values = jp.array([all_rewards[key] for key in all_rewards.keys()])
 
 
@@ -189,6 +156,11 @@ class HumanoidWalker(PipelineEnv):
         done = 1 - weighted_rewards[1] # if the robot is 'not standing' we want to terminate the ep
 
         return weighted_rewards, reward, done
+    
+    #  # Change the action size to be only the number of controlled joints for the RL policy
+    @property
+    def action_size(self) -> int:
+        return self._controlled_joints
     
 # Code to test compilation of the environment 
 

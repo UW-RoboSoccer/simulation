@@ -1,9 +1,15 @@
 <mujoco model="humanoid">
     <compiler angle="degree" inertiafromgeom="true"/>
     <default>
-        <joint armature="1" damping="1" limited="true"/>
+        <joint armature="0.045" damping="1.084"  limited="true"/>
         <geom conaffinity="0" condim="3" contype="0" material="geom" rgba="0.4 0.33 0.26 1.0"/>
-        <position kp="100.0"/> 
+        <position kp="21.1" forcerange="-15 15"/> 
+        <default class="collison">
+            <geom group="1"/>
+            <default class="foot">
+                <geom type="box" friction="0.8 0.02 0.01" contype="1" conaffinity="1" density="1500"/>
+            </default>
+        </default> 
     </default>
     <option iterations="8" timestep="0.003"/>
     <custom>
@@ -43,25 +49,25 @@
             <geom contype="1" name="head" pos="0 0 .19" size=".07" type="sphere" user="258" density="1500"/>
             <!-- Right Thigh - Directly connected to torso -->
             <body name="right_thigh" pos="0 -0.13 -0.125" >
-                <joint armature="0.01" axis="1 0 0" damping="5" name="right_hip_x" pos="0 0 0" range="-25 5" stiffness="0" type="hinge"/>
-                <joint armature="0.01" axis="0 0 1" damping="5" name="right_hip_z" pos="0 0 0" range="-35 35" stiffness="0" type="hinge"/>
-                <joint armature="0.0080" axis="0 1 0" damping="5" name="right_hip_y" pos="0 0 0" range="-90 60" stiffness="0" type="hinge"/>
+                <joint armature="0.01" axis="1 0 0" damping="5" name="right_hip_x" pos="0 0 0" range="-25 5" stiffness="10" type="hinge"/>
+                <joint armature="0.01" axis="0 0 1" damping="5" name="right_hip_z" pos="0 0 0" range="-35 35" stiffness="10" type="hinge"/>
+                <joint armature="0.0080" axis="0 1 0" damping="5" name="right_hip_y" pos="0 0 0" range="-90 60" stiffness="10" type="hinge"/>
                 <geom contype="1" fromto="0 0 0.081 0 0.01 -.121" name="right_thigh1" size="0.06" type="box" density="1500"/>
                 <body name="right_shin" pos="0 0.01 -0.121"  >
                     <joint armature="0.0060" axis="0 -1 0" name="right_knee" pos="0 0 .02" range="-90 0" type="hinge"/>
                     <geom contype="1" fromto="0 0 0 0 0 -.202" name="right_shin1" size="0.049" type="box" density="1500"/>
                     <body name="right_foot" pos="0 0 -0.102" >
                         <site name="right_foot"/>
-                        <joint armature="0.01" axis="0 -1 0" damping="5" name="right_foot" pos="0 0 0" range="-25 25" stiffness="10" type="hinge"/>
-                        <geom contype="1" name="right_foot" pos="0 0 -0.102" size="0.075 0.05 0.025" type="box" user="0" density="1500"/>
+                        <joint armature="0.01" axis="0 -1 0" damping="5" name="right_foot" pos="0 0 0" range="-25 25" stiffness="10" type="hinge" />
+                        <geom name="right_foot"  pos="0 0 -0.102" size="0.075 0.05 0.025" user="0" class="foot"/>
                     </body>
                 </body>
             </body>
             <!-- Left Thigh - Directly connected to torso -->
             <body name="left_thigh" pos="0 0.13 -0.125">
-                <joint armature="0.01" axis="-1 0 0" damping="5" name="left_hip_x" pos="0 0 0" range="-25 5" stiffness="0" type="hinge"/>
-                <joint armature="0.01" axis="0 0 -1" damping="5" name="left_hip_z" pos="0 0 0" range="-35 35" stiffness="0" type="hinge"/>
-                <joint armature="0.01" axis="0 1 0" damping="5" name="left_hip_y" pos="0 0 0" range="-90 60" stiffness="0" type="hinge"/>
+                <joint armature="0.01" axis="-1 0 0" damping="5" name="left_hip_x" pos="0 0 0" range="-25 5" stiffness="10" type="hinge"/>
+                <joint armature="0.01" axis="0 0 -1" damping="5" name="left_hip_z" pos="0 0 0" range="-35 35" stiffness="10" type="hinge"/>
+                <joint armature="0.01" axis="0 1 0" damping="5" name="left_hip_y" pos="0 0 0" range="-90 60" stiffness="10" type="hinge"/>
                 <geom contype="1" fromto="0 0 0.081 0 0.01 -.121" name="left_thigh1" size="0.06" type="box" density="1500"/>
                 <body name="left_shin" pos="0 -0.01 -0.121">
                     <joint armature="0.0060" axis="0 -1 0" name="left_knee" pos="0 0 .02" range="-90 0" stiffness="10" type="hinge"/>
@@ -69,7 +75,7 @@
                     <body name="left_foot" pos="0 0 -0.102">
                         <site name="left_foot"/>
                         <joint armature="0.01" axis="0 -1 0" damping="5" name="left_foot" pos="0 0 0" range="-25 25" stiffness="10" type="hinge"/>
-                        <geom contype="1" name="left_foot" pos="0 0 -0.102" size="0.075 0.05 0.025" type="box" user="0" density="1500"/>
+                        <geom name="left_foot" pos="0 0 -0.102" size="0.075 0.05 0.025" class="foot"/>
                     </body>
                 </body>
             </body>
@@ -98,14 +104,14 @@
     <actuator>
         <position joint="right_hip_x" name="right_hip_x"  inheritrange="1.0"/>
         <position joint="right_hip_z" name="right_hip_z"  inheritrange="1.0"/>
-        <position joint="right_hip_y" name="right_hip_y" kp="300" inheritrange="1.0"/>
-        <position joint="right_knee" name="right_knee" kp="200" inheritrange="1.0"/>
+        <position joint="right_hip_y" name="right_hip_y"  inheritrange="1.0"/>
+        <position joint="right_knee" name="right_knee" inheritrange="1.0"/>
         <position joint="right_foot" name="right_foot" inheritrange="1.0"/>
         
         <position joint="left_hip_x" name="left_hip_x"  inheritrange="1.0"/>
         <position joint="left_hip_z" name="left_hip_z"  inheritrange="1.0"/>
-        <position joint="left_hip_y" name="left_hip_y" kp="300" inheritrange="1.0"/>
-        <position joint="left_knee" name="left_knee" kp="200" inheritrange="1.0"/>
+        <position joint="left_hip_y" name="left_hip_y"  inheritrange="1.0"/>
+        <position joint="left_knee" name="left_knee" inheritrange="1.0"/>
         <position joint="left_foot" name="left_foot"  inheritrange="1.0"/>
         
         <!-- Arm actuators remain unchanged -->

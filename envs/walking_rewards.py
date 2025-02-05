@@ -1,17 +1,6 @@
 import jax
 from jax import numpy as jp
-
-
-sensor_end_idx = {
-    'position' : 3,
-    'gyro' : 6,
-    'local_linvel' : 9,
-    'accelerometer' : 12,
-    'upvector': 15,
-    'forwardvector' : 18,
-    'left_foot_force' : 21,
-    'right_foot_force' : 24
-}
+import envs.walking_consts as consts 
 
 # ===== REWARD FUNCTIONS =====
 # reward for height of robot
@@ -19,7 +8,7 @@ sensor_end_idx = {
 def _base_height_reward(sensor_data: jp.ndarray, min_height: float = 0.4, max_height: float = 0.6) -> float:
     """Compute base height reward"""
 
-    position = sensor_data[ sensor_end_idx['position'] - 3 : sensor_end_idx['position'] ]
+    position = sensor_data[consts.SENSOR_END_IDX['position'] - 3 : consts.SENSOR_END_IDX['position']] 
 
 
     current_height = position[2]
@@ -47,7 +36,7 @@ def _control_actions_reward(pipeline_state, prev_q):
 @jax.jit
 def _rotating_reward(sensor_data, roll_weight=1.0, pitch_weight=0.8, yaw_weight=0.6) -> jp.ndarray:
     """Compute uprightness reward"""
-    angular_velocity = jp.array(sensor_data[ sensor_end_idx['gyro'] - 3 : sensor_end_idx['gyro'] ])
+    angular_velocity = jp.array(sensor_data[consts.SENSOR_END_IDX['gyro'] - 3 : consts.SENSOR_END_IDX['gyro'] ])
 
     roll_penalty = roll_weight * jp.abs(angular_velocity[0])
     pitch_penalty = pitch_weight * jp.abs(angular_velocity[1])
@@ -59,7 +48,7 @@ def _rotating_reward(sensor_data, roll_weight=1.0, pitch_weight=0.8, yaw_weight=
 @jax.jit
 def _upright_reward(sensor_data) -> jp.ndarray:
     upvector = jp.array(sensor_data[
-        sensor_end_idx['upvector'] - 3 : sensor_end_idx['upvector']
+        consts.SENSOR_END_IDX['upvector'] - 3 : consts.SENSOR_END_IDX['upvector']
     ])
 
     ideal_up = jp.array([0.0, 0.0, 1.0])  # World z-axis

@@ -13,15 +13,15 @@ from brax.io import model
 
 import cv2
 
-from envs.kicking import HumanoidKick
+from envs.walking import HumanoidWalker
 import os
 
-env_name = 'kicker'
+env_name = 'walker_ernest'
 # backend = 'positional'
-envs.register_environment(env_name, HumanoidKick)
+envs.register_environment(env_name, HumanoidWalker)
 env = envs.get_environment(env_name=env_name) #, xml_path='assets/humanoid/modified_humanoid.xml')
 
-xml_path='assets/humanoid/humanoid_pos.xml'
+xml_path='assets/humanoid/ernest_humanoid.xml'
 model_path = 'output/params'
 # model_path = None
 # env = envs.get_environment(env_name)
@@ -30,8 +30,10 @@ def gen_rollout(env, model_path=None, n_steps=250):
     jit_inference_fn = None
 
     if model_path:
+        print("model path", model_path)
+        print(env.action_size, env.observation_size)
         params = model.load_params(model_path)
-        network = ppo_networks.make_ppo_networks(action_size=env.action_size, observation_size=env.observation_size)
+        network = ppo_networks.make_ppo_networks(action_size=16, observation_size=env.observation_size)
         make_inference_fn = ppo_networks.make_inference_fn(network)
         inference_fn = make_inference_fn(params)
         jit_inference_fn = jax.jit(inference_fn)
@@ -70,20 +72,19 @@ import matplotlib.pyplot as plt
 total_reward = [stat['total_reward'] for stat in stats]
 velocity_reward = [stat['velocity_reward'] for stat in stats]
 base_height_reward = [stat['base_height_reward'] for stat in stats]
-base_acceleration_reward = [stat['base_acceleration_reward'] for stat in stats]
-feet_contact_reward = [stat['feet_contact_reward'] for stat in stats]
-action_difference_reward = [stat['action_diff_reward'] for stat in stats]
-uprightness_reward = [stat['upright_reward'] for stat in stats]
+control_cost_reward = [stat['control_cost'] for stat in stats]
+rotation_cost = [stat['rotation_cost'] for stat in stats]
+upright_rewards = [stat['upright_reward'] for stat in stats]
+
 
 #Plot Stabilization Metrics
 plt.figure(figsize=(12, 8))
 plt.plot(total_reward, label='Total Reward')
 plt.plot(velocity_reward, label='Velocity Reward')
 plt.plot(base_height_reward, label='Base Height Reward')
-plt.plot(base_acceleration_reward, label='Base Acceleration Reward')
-plt.plot(feet_contact_reward, label='Feet Contact Reward')
-plt.plot(action_difference_reward, label='Action Difference Reward')
-plt.plot(uprightness_reward, label='Upright Reward')
+plt.plot(control_cost_reward, label='Control Cost Reward')
+plt.plot(rotation_cost, label='Rotation Cost')
+plt.plot(upright_rewards, label='Upright Rewards')
 plt.xlabel('Time Step')
 plt.ylabel('Reward')
 plt.title('Reward Metrics Over Time')

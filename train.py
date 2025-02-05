@@ -4,7 +4,7 @@ from brax.io import model
 
 from datetime import datetime
 
-from envs.kicking import HumanoidKick
+from envs.walking import HumanoidWalker
 
 import functools
 
@@ -14,8 +14,8 @@ from matplotlib import pyplot as plt
 
 ##Feet currently spawns inside the ground
 
-envs.register_environment('kicker', HumanoidKick)
-env = envs.get_environment('kicker') #, xml_path='assets/humanoid/humanoid_pos.xml')
+envs.register_environment('walker_ernest', HumanoidWalker)
+env = envs.get_environment('walker_ernest') #, xml_path='assets/humanoid/humanoid_pos.xml')
 
 jit_reset = jax.jit(env.reset)
 jit_step = jax.jit(env.step)

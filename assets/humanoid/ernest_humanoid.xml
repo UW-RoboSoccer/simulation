@@ -34,66 +34,66 @@
     <worldbody>
         <light cutoff="100" diffuse="1 1 1" dir="-0 0 -1.3" directional="true" exponent="1" pos="0 0 1.3" specular=".1 .1 .1"/>
         <geom conaffinity="1" condim="3" friction="1 .1 .1" material="MatPlane" name="floor" pos="0 0 0" size="20 20 0.125" type="plane" rgba="0.5 0.5 0.5 1.0"/>
-        <body name="torso" pos="0 0 1.4">
+        <body name="torso" pos="0 0 0.5">
+            <site name="imu"/>
             <camera name="track" mode="trackcom" pos="0 -4 0" xyaxes="1 0 0 0 0 1"/>
             <joint armature="0" damping="0" limited="false" name="root" pos="0 0 0" stiffness="0" type="free"/>
-            s<geom contype="1" fromto="0 0 -0.125 0 0 0" name="torso1" size="0.07" type="capsule"/>
+            <geom contype="1" fromto="0 0 -0.125 0 0 0.125" name="torso1" size="0.07" type="box"/>
             <geom contype="1" name="head" pos="0 0 .19" size=".07" type="sphere" user="258"/>
-            
             <!-- Right Thigh - Directly connected to torso -->
-            <!-- Right Thigh - Directly connected to torso -->
-            <body name="right_thigh" pos="0 -0.1 -0.125">
+            <body name="right_thigh" pos="0 -0.13 -0.125">
                 <joint armature="0.01" axis="1 0 0" damping="5" name="right_hip_x" pos="0 0 0" range="-25 5" stiffness="10" type="hinge"/>
-                <joint armature="0.01" axis="0 0 1" damping="5" name="right_hip_z" pos="0 0 0" range="-60 35" stiffness="10" type="hinge"/>
-                <joint armature="0.0080" axis="0 1 0" damping="5" name="right_hip_y" pos="0 0 0" range="-110 20" stiffness="20" type="hinge"/>
-                <geom contype="1" fromto="0 0 0 0 0.01 -.121" name="right_thigh1" size="0.06" type="capsule"/>
+                <joint armature="0.01" axis="0 0 1" damping="5" name="right_hip_z" pos="0 0 0" range="-35 35" stiffness="10" type="hinge"/>
+                <joint armature="0.0080" axis="0 1 0" damping="5" name="right_hip_y" pos="0 0 0" range="-90 60" stiffness="10" type="hinge"/>
+                <geom contype="1" fromto="0 0 0.081 0 0.01 -.121" name="right_thigh1" size="0.06" type="box"/>
                 <body name="right_shin" pos="0 0.01 -0.121">
-                    <joint armature="0.0060" axis="0 -1 0" name="right_knee" pos="0 0 .02" range="-160 -2" type="hinge"/>
-                    <geom contype="1" fromto="0 0 0 0 0 -.102" name="right_shin1" size="0.049" type="capsule"/>
+                    <joint armature="0.0060" axis="0 -1 0" name="right_knee" pos="0 0 .02" range="-90 0" type="hinge"/>
+                    <geom contype="1" fromto="0 0 0 0 0 -.202" name="right_shin1" size="0.049" type="box"/>
                     <body name="right_foot" pos="0 0 -0.102">
-<geom contype="1" name="right_foot" pos="0 0 -0.102" size="0.075 0.05 0.025" type="box" user="0"/>
+                        <site name="right_foot"/>
+                        <joint armature="0.01" axis="0 -1 0" damping="5" name="right_foot" pos="0 0 0" range="-25 25" stiffness="10" type="hinge"/>
+                        <geom contype="1" name="right_foot" pos="0 0 -0.102" size="0.075 0.05 0.025" type="box" user="0"/>
                     </body>
                 </body>
             </body>
-
             <!-- Left Thigh - Directly connected to torso -->
-            <body name="left_thigh" pos="0 0.15 -0.125">
+            <body name="left_thigh" pos="0 0.13 -0.125">
                 <joint armature="0.01" axis="-1 0 0" damping="5" name="left_hip_x" pos="0 0 0" range="-25 5" stiffness="10" type="hinge"/>
-                <joint armature="0.01" axis="0 0 -1" damping="5" name="left_hip_z" pos="0 0 0" range="-60 35" stiffness="10" type="hinge"/>
-                <joint armature="0.01" axis="0 1 0" damping="5" name="left_hip_y" pos="0 0 0" range="-110 20" stiffness="20" type="hinge"/>
-                <geom contype="1" fromto="0 0 0 0 -0.01 -.121" name="left_thigh1" size="0.06" type="capsule"/>
+                <joint armature="0.01" axis="0 0 -1" damping="5" name="left_hip_z" pos="0 0 0" range="-35 35" stiffness="10" type="hinge"/>
+                <joint armature="0.01" axis="0 1 0" damping="5" name="left_hip_y" pos="0 0 0" range="-90 60" stiffness="10" type="hinge"/>
+                <geom contype="1" fromto="0 0 0.081 0 0.01 -.121" name="left_thigh1" size="0.06" type="box"/>
                 <body name="left_shin" pos="0 -0.01 -0.121">
-                    <joint armature="0.0060" axis="0 -1 0" name="left_knee" pos="0 0 .02" range="-160 -2" stiffness="1" type="hinge"/>
-                    <geom contype="1" fromto="0 0 0 0 0 -.102" name="left_shin1" size="0.049" type="capsule"/>
+                    <joint armature="0.0060" axis="0 -1 0" name="left_knee" pos="0 0 .02" range="-90 0" stiffness="10" type="hinge"/>
+                    <geom contype="1" fromto="0 0 0 0 0 -.202" name="left_shin1" size="0.049" type="box"/>
                     <body name="left_foot" pos="0 0 -0.102">
-<geom contype="1" name="left_foot" pos="0 0 -0.102" size="0.075 0.05 0.025" type="box" user="0"/>
+                        <site name="left_foot"/>
+                        <joint armature="0.01" axis="0 -1 0" damping="5" name="left_foot" pos="0 0 0" range="-25 25" stiffness="10" type="hinge"/>
+                        <geom contype="1" name="left_foot" pos="0 0 -0.102" size="0.075 0.05 0.025" type="box" user="0"/>
                     </body>
                 </body>
             </body>
-
             <body name="right_upper_arm" pos="0 -0.17 0.06">
-    <joint armature="0.0068" axis="2 1 1" name="right_shoulder1" pos="0 0 0" range="-85 60" stiffness="1" type="hinge"/>
-    <joint armature="0.0051" axis="0 -1 1" name="right_shoulder2" pos="0 0 0" range="-85 60" stiffness="1" type="hinge"/>
-    <geom fromto="0 0 0 .122 -.122 -.122" name="right_uarm1" size="0.04 0.16" type="capsule"/>
-    <body name="right_lower_arm" pos=".122 -.122 -.122">
-        <joint armature="0.0028" axis="0 -1 1" name="right_elbow" pos="0 0 0" range="-90 50" stiffness="0" type="hinge"/>
-        <geom contype="1" fromto="0 0 0 .075 .075 .075" name="right_larm" size="0.031" type="capsule"/>
-        <geom contype="1" name="right_hand" pos=".075 .075 .075" size="0.04" type="sphere"/>
-    </body>
-</body>
+                <joint armature="0.0068" axis="2 1 1" name="right_shoulder1" pos="0 0 0" range="-85 40" stiffness="10" type="hinge"/>
+                <joint armature="0.0051" axis="0 -1 1" name="right_shoulder2" pos="0 0 0" range="-85 40" stiffness="10" type="hinge"/>
+                <geom fromto="0 0 0 .122 -.122 -.122" name="right_uarm1" size="0.04 0.16" type="box"/>
+                <body name="right_lower_arm" pos=".122 -.122 -.122">
+                    <joint armature="0.0028" axis="0 -1 1" name="right_elbow" pos="0 0 0" range="-90 50" stiffness="10" type="hinge"/>
+                    <geom contype="1" fromto="0 0 0 .075 .075 .075" name="right_larm" size="0.031" type="box"/>
+                    <geom contype="1" name="right_hand" pos=".075 .075 .075" size="0.04" type="sphere"/>
+                </body>
+            </body>
             <body name="left_upper_arm" pos="0 0.17 0.06">
-    <joint armature="0.0068" axis="2 -1 1" name="left_shoulder1" pos="0 0 0" range="-60 85" stiffness="1" type="hinge"/>
-    <joint armature="0.0051" axis="0 1 1" name="left_shoulder2" pos="0 0 0" range="-60 85" stiffness="1" type="hinge"/>
-    <geom contype="1" fromto="0 0 0 .122 .122 -.122" name="left_uarm1" size="0.04 0.16" type="capsule"/>
-    <body name="left_lower_arm" pos=".122 .122 -.122">
-        <joint armature="0.0028" axis="0 -1 -1" name="left_elbow" pos="0 0 0" range="-90 50" stiffness="0" type="hinge"/>
-        <geom contype="1" fromto="0 0 0 .075 -.075 .075" name="left_larm" size="0.031" type="capsule"/>
-        <geom contype="1" name="left_hand" pos=".075 -.075 .075" size="0.04" type="sphere"/>
-    </body>
-</body>
+                <joint armature="0.0068" axis="2 -1 1" name="left_shoulder1" pos="0 0 0" range="-40 85" stiffness="10" type="hinge"/>
+                <joint armature="0.0051" axis="0 1 1" name="left_shoulder2" pos="0 0 0" range="-40 85" stiffness="10" type="hinge"/>
+                <geom contype="1" fromto="0 0 0 .122 .122 -.122" name="left_uarm1" size="0.04 0.16" type="box"/>
+                <body name="left_lower_arm" pos=".122 .122 -.122">
+                    <joint armature="0.0028" axis="0 -1 -1" name="left_elbow" pos="0 0 0" range="-90 50" stiffness="10" type="hinge"/>
+                    <geom contype="1" fromto="0 0 0 .075 -.075 .075" name="left_larm" size="0.031" type="box"/>
+                    <geom contype="1" name="left_hand" pos=".075 -.075 .075" size="0.04" type="sphere"/>
+                </body>
+            </body>
         </body>
     </worldbody>
-
     <actuator>
         <position joint="right_hip_x" name="right_hip_x"/>
         <position joint="right_hip_z" name="right_hip_z"/>
@@ -109,5 +109,22 @@
         <position joint="left_shoulder1" name="left_shoulder1"/>
         <position joint="left_shoulder2" name="left_shoulder2"/>
         <position joint="left_elbow" name="left_elbow"/>
+        <position joint="left_foot" name="left_foot"/>
+        <position joint="right_foot" name="right_foot"/>
     </actuator>
+    <sensor>
+        <framepos objtype="site" objname="imu" name="position"/>
+        <gyro site="imu" name="gyro"/>
+        <velocimeter site="imu" name="local_linvel"/>
+        <accelerometer site="imu" name="accelerometer"/>
+        <framezaxis objtype="site" objname="imu" name="upvector"/>
+        <framexaxis objtype="site" objname="imu" name="forwardvector"/>
+        <force site="left_foot" name="left_foot_force"/>
+        <force site="right_foot" name="right_foot_force"/>
+    </sensor>
 </mujoco>
+
+<!-- 
+add mass to links
+change links to be prisms -->
+
