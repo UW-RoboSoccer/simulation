@@ -7,4 +7,4 @@ if [ ! -d "./output" ]; then
 fi
 
 # Run the visualize.py script
-python3 temp_visualize.py
+python3 visualize.py
