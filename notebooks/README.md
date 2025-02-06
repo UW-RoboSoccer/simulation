@@ -26,7 +26,3 @@ Welcome to the UW RoboSoccer project! This guide will help you get started with 
 6. **Save Changes**:
     - If you make changes that you want to save, click the **Save a copy in GitHub** button at the top of the screen.
     - Commit your changes back to the respective branch with a meaningful commit message.
-
-Happy coding!
-
-For any issues or questions, please contact the project maintainers.
